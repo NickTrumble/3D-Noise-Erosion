@@ -8,5 +8,5 @@ public class Main {
         engine.start();
     }
 
-    public static void log(String msg) {System.out.println(msg); }
+    //public static void log(String msg) {System.out.println(msg); }
 }
