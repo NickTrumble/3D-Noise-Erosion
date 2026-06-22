@@ -1,6 +1,8 @@
 package org.noiseErosion;
 
 
+import java.util.Vector;
+
 //TODO:
 //add in more shapes based on internal angles, e.g. 3d hex
 //holds 3d object (model)(square for now) to get eroded
@@ -8,7 +10,9 @@ public class Model {
     private Vector3[] vertices;
     private int[][] triangles;
     private final float edgeLength;
-    private final Vector3 offset;
+    private Vector3 offset;
+
+
 
     public Model(float edgeLength, Vector3 offset){
         this.edgeLength = edgeLength;
@@ -60,6 +64,16 @@ public class Model {
         triangles[11] = new int[]{2, 7, 3};
     }
 
+    public void buildModel(){
+        populateVerticeArray();
+        populateTriangleArray();
+    }
+
     public int[][] getTriangles() { return triangles; }
     public Vector3[] getVertices() { return vertices; }
+
+    public void updateOffset(Vector3 offset){
+        this.offset = offset;
+        buildModel();
+    }
 }

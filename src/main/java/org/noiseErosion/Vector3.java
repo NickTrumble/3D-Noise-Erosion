@@ -26,6 +26,18 @@ public class Vector3 {
         return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
     }
 
+    public void normalise(){
+        float invSqrt = (float) (1f / Math.sqrt(x*x + y*y + z*z));
+        multiply(invSqrt);
+    }
+
+    public Vector3 cross(Vector3 v){
+        return new Vector3(
+                y * v.z - z * v.y,
+                z * v.x - x * v.z,
+                x * v.y - y * v.x
+        );
+    }
     @Override
     public String toString(){
         return String.format("%.2f, %.2f, %.2f", x, y, z);

@@ -5,7 +5,7 @@ import javafx.scene.canvas.GraphicsContext;
 import java.util.ArrayList;
 
 public class Renderer {
-    private Camera cam;
+    public Camera cam;
     private GraphicsContext gc;
 
     public Renderer(Camera cam){
@@ -70,6 +70,10 @@ public class Renderer {
                 3
         );
 
+    }
+
+    public void clearScreen(){
+        gc.clearRect(0, 0, Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT);
     }
 
     public void setGraphicsContext(GraphicsContext gc){

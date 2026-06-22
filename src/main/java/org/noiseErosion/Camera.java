@@ -28,6 +28,7 @@ public class Camera {
                 break;
             }
         }
+
         return result;
     }
 
@@ -52,15 +53,40 @@ public class Camera {
         float y = v.y - position.y;
         float z = v.z - position.z;
 
-        if (z <= 0)
+//        if (z <= 0)
+//            return null;
+//
+//        float fov = 500;
+//
+//        float screenX = (x * fov) / z;
+//        float screenY = (y * fov) / z;
+//
+//
+
+        Vector3 forward = new Vector3(
+                lookat.x - position.x,
+                lookat.y - position.y,
+                lookat.z - position.z
+        );
+        forward.normalise();
+
+        Vector3 right = forward.cross(up);
+        right.normalise();
+
+        Vector3 trueUp = right.cross(forward);
+
+        float cx = x * right.x   + y * right.y   + z * right.z;
+        float cy = x * trueUp.x + y * trueUp.y + z * trueUp.z;
+        float cz = x * forward.x + y * forward.y + z * forward.z;
+
+        if (cz <= 0)
             return null;
 
         float fov = 500;
+        float screenX = (cx * fov) / cz;
+        float screenY = (cy * fov) / cz;
 
-        float screenX = (x * fov) / z;
-        float screenY = (y * fov) / z;
-
-        return new Vector3(screenX, screenY, z);
+        return new Vector3(screenX, screenY, cz);
     }
 
 //getters and setters

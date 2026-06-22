@@ -1,5 +1,6 @@
 package org.noiseErosion;
 
+import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
@@ -11,6 +12,9 @@ import java.util.ArrayList;
 public class Window extends Application {
     private static Renderer renderer;
     private static ArrayList<Model> models;
+
+    private float angle = 0f;
+    private float orbitRadius = 10f;
 
     public Window(){
 
@@ -35,5 +39,29 @@ public class Window extends Application {
         stage.show();
 
         renderer.render(models);
+
+
+        new AnimationTimer(){
+            @Override
+            public void handle(long now){
+                renderer.clearScreen();
+                renderer.render(models);
+                updateCameraPos();
+            }
+        }.start();
     }
+
+    public void updateCameraPos(){
+        angle += 0.001f;
+
+        Vector3 lookat = renderer.cam.getLookat();
+
+        float camX = lookat.x + (float) Math.cos(angle) * orbitRadius;
+        float camZ = lookat.z + (float) Math.sin(angle) * orbitRadius;
+        float camY = renderer.cam.getPosition().y;
+
+        renderer.cam.setPosition(new Vector3(camX, camY, camZ));
+    }
+
+
 }
