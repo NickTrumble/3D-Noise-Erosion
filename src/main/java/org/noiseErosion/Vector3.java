@@ -22,6 +22,20 @@ public class Vector3 {
         this.z *= c;
     }
 
+    public void subtract(Vector3 v){
+        this.x -= v.x;
+        this.y -= v.y;
+        this.z -= v.z;
+    }
+
+    public static Vector3 subtract(Vector3 v1, Vector3 v2){
+        return new Vector3(
+                v1.x - v2.x,
+                v1.y - v2.y,
+                v1.z - v2.z
+        );
+    }
+
     public static float dot(Vector3 v1, Vector3 v2){
         return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
     }

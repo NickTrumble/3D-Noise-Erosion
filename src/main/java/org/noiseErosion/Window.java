@@ -12,17 +12,15 @@ import java.util.ArrayList;
 public class Window extends Application {
     private static Renderer renderer;
     private static ArrayList<Model> models;
+    private static ArrayList<SolidModel> solidModels;
 
     private float angle = 0f;
-    private float orbitRadius = 10f;
+    private final float orbitRadius = 10f;
 
-    public Window(){
-
-    }
-
-    public static void launchWindow(Renderer r, ArrayList<Model> m){
+    public static void launchWindow(Renderer r, ArrayList<Model> m, ArrayList<SolidModel> sm){
         renderer = r;
         models = m;
+        solidModels = sm;
         Application.launch(Window.class);
     }
 
@@ -38,14 +36,15 @@ public class Window extends Application {
         stage.setTitle("Noise Erosion");
         stage.show();
 
-        renderer.render(models);
+        renderer.renderHollows(models);
 
 
         new AnimationTimer(){
             @Override
             public void handle(long now){
                 renderer.clearScreen();
-                renderer.render(models);
+                renderer.renderHollows(models);
+                renderer.renderSolids(solidModels);
                 updateCameraPos();
             }
         }.start();

@@ -53,16 +53,6 @@ public class Camera {
         float y = v.y - position.y;
         float z = v.z - position.z;
 
-//        if (z <= 0)
-//            return null;
-//
-//        float fov = 500;
-//
-//        float screenX = (x * fov) / z;
-//        float screenY = (y * fov) / z;
-//
-//
-
         Vector3 forward = new Vector3(
                 lookat.x - position.x,
                 lookat.y - position.y,
@@ -97,6 +87,13 @@ public class Camera {
     public Vector3 getPosition() { return position; }
     public Vector3 getLookat() { return lookat; }
     public Vector3 getUp() { return up; }
+    public Vector3 getForward() {
+        return new Vector3(
+                lookat.x - position.x,
+                lookat.y - position.y,
+                lookat.z - position.z
+        );
+    }
 
 //override methods
     @Override
