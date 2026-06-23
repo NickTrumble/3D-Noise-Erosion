@@ -60,11 +60,11 @@ public class Renderer {
                     float wz = offset.z + k - half;
 
                     if (!model.isSolid(i, j, k - 1))
-                        addFace(verts, tris,  // -k face
+                        addFace(verts, tris,  // -k face — reversed
                                 new Vector3(wx,   wy,   wz),
-                                new Vector3(wx+1, wy,   wz),
+                                new Vector3(wx,   wy+1, wz),   // swap b and d
                                 new Vector3(wx+1, wy+1, wz),
-                                new Vector3(wx,   wy+1, wz)
+                                new Vector3(wx+1, wy,   wz)
                         );
 
                     if (!model.isSolid(i, j, k + 1))
@@ -86,9 +86,9 @@ public class Renderer {
                     if (!model.isSolid(i + 1, j, k))
                         addFace(verts, tris, // +i face
                                 new Vector3(wx+1, wy,   wz),
-                                new Vector3(wx+1, wy,   wz+1),
+                                new Vector3(wx+1, wy+1, wz),
                                 new Vector3(wx+1, wy+1, wz+1),
-                                new Vector3(wx+1, wy+1, wz)
+                                new Vector3(wx+1, wy,   wz+1)
                         );
 
                     if (!model.isSolid(i, j - 1, k))
@@ -102,9 +102,9 @@ public class Renderer {
                     if (!model.isSolid(i, j + 1, k))
                         addFace(verts, tris, // +j face
                                 new Vector3(wx,   wy+1, wz),
-                                new Vector3(wx+1, wy+1, wz),
+                                new Vector3(wx,   wy+1, wz+1),
                                 new Vector3(wx+1, wy+1, wz+1),
-                                new Vector3(wx,   wy+1, wz+1)
+                                new Vector3(wx+1, wy+1, wz)
                         );
                 }
             }
@@ -128,7 +128,6 @@ public class Renderer {
         tris.add(new int[] { index, index + 1, index + 2 });
         tris.add(new int[] { index, index + 2, index + 3 });
     }
-
 
     //needed for both versions
     private boolean[] getVerticesToRender(Vector3[] vertices){
@@ -179,18 +178,15 @@ public class Renderer {
 
         float facingVal = isLookingAt(v1, v2, v3);
 
-//        if (facingVal <= 0){
-//            return;
-//        } else {
-//            //gc.setFill(Color.color(facingVal, facingVal, facingVal));
-//        }
+        float maxColour = 0.8f;
+        if (facingVal <= 0){
+            return;
+        } else {
+            gc.setFill(Color.color(facingVal * maxColour, facingVal * maxColour, facingVal * maxColour));
+        }
 
-        Vector3 normal = cam.project(getNormal(v1, v2, v3));
-        Vector3 centre = cam.project(getCentre(v1, v2, v3));
-
-        gc.strokeLine(centre.x + centreX, centre.y + centreY, centreX + centre.x + normal.x * 2, centreY + centre.y + normal.y * 2);
         if (colour){
-            gc.strokePolygon(
+            gc.fillPolygon(
                     new double[]{
                             a.x + centreX,
                             b.x + centreX,
@@ -225,7 +221,7 @@ public class Renderer {
         Vector3 ac = Vector3.subtract(c, a);
 
         Vector3 normal = ab.cross(ac);
-        //normal.normalise();
+        normal.normalise();
         return normal;
     }
 
