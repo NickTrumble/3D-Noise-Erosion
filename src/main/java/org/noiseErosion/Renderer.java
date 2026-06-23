@@ -52,6 +52,8 @@ public class Renderer {
             for (int j = 0; j < width; j++) {
                 for (int k = 0; k < width; k++) {
 
+                    if(!model.isSolid(i, j, k)) continue;
+
                     float wx = offset.x + (i - half) * model.voxelSize;
                     float wy = offset.y + (j - half) * model.voxelSize;
                     float wz = offset.z + (k - half) * model.voxelSize;
@@ -59,7 +61,7 @@ public class Renderer {
                     if (!model.isSolid(i, j, k - 1))
                         addFace(verts, tris,  // -k face — reversed
                                 new Vector3(wx,   wy,   wz),
-                                new Vector3(wx,   wy+model.voxelSize, wz),   // swap b and d
+                                new Vector3(wx,   wy+model.voxelSize, wz),
                                 new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz),
                                 new Vector3(wx+model.voxelSize, wy,   wz)
                         );
@@ -112,7 +114,7 @@ public class Renderer {
         tris.sort((t1, t2) -> {
             float d1 = getAverageZ(t1, vertices);
             float d2 = getAverageZ(t2, vertices);
-            return Float.compare(d1, d2);
+            return Float.compare(d2, d1);
         });
         int[][] triangles = tris.toArray(new int[0][]);
 

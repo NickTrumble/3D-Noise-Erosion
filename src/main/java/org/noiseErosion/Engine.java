@@ -5,8 +5,8 @@ import java.util.ArrayList;
 public class Engine {
     private ArrayList<Model> hollowModels;
     private ArrayList<SolidModel> solidModels;
-    private Camera cam;
-    private Renderer renderer;
+    private final Camera cam;
+    private final Renderer renderer;
 
     public Engine(){
         cam = new Camera();
