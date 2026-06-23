@@ -7,10 +7,6 @@ public class Main {
         Vector3 camPosition = new Vector3(5, 0, 10);
         Vector3 modelCentre = new Vector3(0, -5, -5);
 
-
-        Model m = new Model(2, modelCentre);
-
-
         SolidModel sm = new SolidModel(4, modelCentre);
         sm.setColour(Color.BLACK);
 
