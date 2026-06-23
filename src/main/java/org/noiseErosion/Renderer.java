@@ -41,22 +41,20 @@ public class Renderer {
     }
 
     public void renderSolidModel(SolidModel model){
-        int width = model.width;
+        int width = model.units;
         Vector3 offset = model.offset;
         ArrayList<Vector3> verts = new ArrayList<>();
         ArrayList<int[]> tris = new ArrayList<>();
 
-        float half = width / 2f;
+        float half = model.units / 2f;
 
         for(int i = 0; i < width; i++){
             for (int j = 0; j < width; j++) {
                 for (int k = 0; k < width; k++) {
-                    if(!model.isSolid(i, j, k))
-                        continue;
 
-                    float wx = offset.x - half + i / model.voxelSize;
-                    float wy = offset.y - half + j / model.voxelSize;
-                    float wz = offset.z - half + k / model.voxelSize;
+                    float wx = offset.x + (i - half) * model.voxelSize;
+                    float wy = offset.y + (j - half) * model.voxelSize;
+                    float wz = offset.z + (k - half) * model.voxelSize;
 
                     if (!model.isSolid(i, j, k - 1))
                         addFace(verts, tris,  // -k face — reversed
@@ -248,8 +246,15 @@ public class Renderer {
         Vector3 a = vertices[tris[0]];
         Vector3 b = vertices[tris[1]];
         Vector3 c = vertices[tris[2]];
-        Vector3 centre = getCentre(a, b, c);
-        return cam.project(centre).z;
+
+        float cx = (a.x + b.x + c.x) / 3f - cam.getPosition().x;
+        float cy = (a.y + b.y + c.y) / 3f - cam.getPosition().y;
+        float cz = (a.z + b.z + c.z) / 3f - cam.getPosition().z;
+
+        Vector3 forward = cam.getForward();
+        forward.normalise();
+
+        return cx * forward.x + cy * forward.y + cz * forward.z;
     }
 
     public Vector3 getCentre(Vector3 a, Vector3 b, Vector3 c){
