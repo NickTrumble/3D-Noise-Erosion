@@ -7,15 +7,13 @@ public class Main {
         Vector3 camPosition = new Vector3(5, 0, 10);
         Vector3 modelCentre = new Vector3(0, 0, -5);
 
-        SolidModel sm = new SolidModel(4, modelCentre, 128);
-        sm.setColour(Color.BLANCHEDALMOND);
+        SolidModel sm = new SolidModel(4, modelCentre, 32);
+        sm.setColour(Color.GREEN);
 
-        sm.setSolid(false, 0, 0, 0);
-        sm.setSolid(false, 1, 0, 0);
-        sm.setSolid(false, 2, 0, 0);
+        sm.loadSolidState(Noise.apply(sm, 0.1f, 0.2f));
+
 
         Engine engine = new Engine(camPosition, modelCentre);
-
         engine.addModel(sm);
 
         engine.start();

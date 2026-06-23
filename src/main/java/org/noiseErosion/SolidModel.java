@@ -3,7 +3,7 @@ package org.noiseErosion;
 import javafx.scene.paint.Color;
 
 public class SolidModel {
-    private boolean[][][] solid;
+    private final boolean[][][] solid;
     public int width;
     public Vector3 offset;
     public float voxelSize; //to add
@@ -33,7 +33,16 @@ public class SolidModel {
             }
         }
     }
-
+    
+    public void loadSolidState(boolean[][][] state){
+        for (int i = 0; i < units; i++) {
+            for (int j = 0; j < units; j++) {
+                for (int k = 0; k < units; k++) {
+                    setSolid(state[i][j][k], i, j, k);
+                }
+            }
+        }
+    }
 
     public boolean isSolid(int x, int y, int z){
         if(x < 0 || x >= units) return false;
