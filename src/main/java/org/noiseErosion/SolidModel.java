@@ -6,11 +6,12 @@ public class SolidModel {
     private boolean[][][] solid;
     public int width;
     public Vector3 offset;
-    public float voxelScale; //to add
+    public float voxelSize; //to add
     public Color colour;
 
-    public SolidModel(int modelWidth, Vector3 offset){
+    public SolidModel(int modelWidth, Vector3 offset, float unitWidth){
         width = modelWidth;
+        voxelSize = unitWidth / width;
         this.offset = offset;
         solid = new boolean[modelWidth][modelWidth][modelWidth];
         setSolid();
@@ -32,6 +33,10 @@ public class SolidModel {
         if(y < 0 || y >= width) return false;
         if(z < 0 || z >= width) return false;
         return solid[x][y][z];
+    }
+
+    public void setSolid(boolean state, int i, int j, int k){
+        solid[i][j][k] = state;
     }
 
     public void setColour(Color colour) { this.colour = colour; }

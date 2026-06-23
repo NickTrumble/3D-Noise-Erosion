@@ -27,7 +27,7 @@ public class Renderer {
         Vector3[] vertices = model.getVertices();
         boolean[] trianglesToRender = getTrianglesToRender(triangles, vertices);
 
-        drawTriangles(triangles, trianglesToRender, vertices, false);
+        drawTriangles(triangles, trianglesToRender, vertices, null);
     }
 
     //solid model
@@ -54,67 +54,73 @@ public class Renderer {
                     if(!model.isSolid(i, j, k))
                         continue;
 
-                    float wx = offset.x + i - half;
-                    float wy = offset.y + j - half;
-                    float wz = offset.z + k - half;
+                    float wx = offset.x - half + i / model.voxelSize;
+                    float wy = offset.y - half + j / model.voxelSize;
+                    float wz = offset.z - half + k / model.voxelSize;
 
                     if (!model.isSolid(i, j, k - 1))
                         addFace(verts, tris,  // -k face — reversed
                                 new Vector3(wx,   wy,   wz),
-                                new Vector3(wx,   wy+1, wz),   // swap b and d
-                                new Vector3(wx+1, wy+1, wz),
-                                new Vector3(wx+1, wy,   wz)
+                                new Vector3(wx,   wy+model.voxelSize, wz),   // swap b and d
+                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz),
+                                new Vector3(wx+model.voxelSize, wy,   wz)
                         );
 
                     if (!model.isSolid(i, j, k + 1))
                         addFace(verts, tris, // +k face
-                                new Vector3(wx,   wy,   wz+1),
-                                new Vector3(wx+1, wy,   wz+1),
-                                new Vector3(wx+1, wy+1, wz+1),
-                                new Vector3(wx,   wy+1, wz+1)
+                                new Vector3(wx,   wy,   wz+model.voxelSize),
+                                new Vector3(wx+model.voxelSize, wy,   wz+model.voxelSize),
+                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz+model.voxelSize),
+                                new Vector3(wx,   wy+model.voxelSize, wz+model.voxelSize)
                         );
 
                     if (!model.isSolid(i - 1, j, k))
                         addFace(verts, tris, // -i face
                                 new Vector3(wx, wy,   wz),
-                                new Vector3(wx, wy,   wz+1),
-                                new Vector3(wx, wy+1, wz+1),
-                                new Vector3(wx, wy+1, wz)
+                                new Vector3(wx, wy,   wz+model.voxelSize),
+                                new Vector3(wx, wy+model.voxelSize, wz+model.voxelSize),
+                                new Vector3(wx, wy+model.voxelSize, wz)
                         );
 
                     if (!model.isSolid(i + 1, j, k))
                         addFace(verts, tris, // +i face
-                                new Vector3(wx+1, wy,   wz),
-                                new Vector3(wx+1, wy+1, wz),
-                                new Vector3(wx+1, wy+1, wz+1),
-                                new Vector3(wx+1, wy,   wz+1)
+                                new Vector3(wx+model.voxelSize, wy,   wz),
+                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz),
+                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz+model.voxelSize),
+                                new Vector3(wx+model.voxelSize, wy,   wz+model.voxelSize)
                         );
 
                     if (!model.isSolid(i, j - 1, k))
                         addFace(verts, tris, // -j face
                                 new Vector3(wx,   wy, wz),
-                                new Vector3(wx+1, wy, wz),
-                                new Vector3(wx+1, wy, wz+1),
-                                new Vector3(wx,   wy, wz+1)
+                                new Vector3(wx+model.voxelSize, wy, wz),
+                                new Vector3(wx+model.voxelSize, wy, wz+model.voxelSize),
+                                new Vector3(wx,   wy, wz+model.voxelSize)
                         );
 
                     if (!model.isSolid(i, j + 1, k))
                         addFace(verts, tris, // +j face
-                                new Vector3(wx,   wy+1, wz),
-                                new Vector3(wx,   wy+1, wz+1),
-                                new Vector3(wx+1, wy+1, wz+1),
-                                new Vector3(wx+1, wy+1, wz)
+                                new Vector3(wx,   wy+model.voxelSize, wz),
+                                new Vector3(wx,   wy+model.voxelSize, wz+model.voxelSize),
+                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz+model.voxelSize),
+                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz)
                         );
                 }
             }
         }
 
         Vector3[] vertices = verts.toArray(new Vector3[0]);
+
+        tris.sort((t1, t2) -> {
+            float d1 = getAverageZ(t1, vertices);
+            float d2 = getAverageZ(t2, vertices);
+            return Float.compare(d1, d2);
+        });
         int[][] triangles = tris.toArray(new int[0][]);
 
         boolean[] trianglesToRender = getTrianglesToRender(triangles, vertices);
 
-        drawTriangles(triangles, trianglesToRender, vertices, model.colour != null);
+        drawTriangles(triangles, trianglesToRender, vertices, model.colour);
     }
 
     private void addFace(ArrayList<Vector3> verts, ArrayList<int[]> tris, Vector3 a, Vector3 b, Vector3 c, Vector3 d){
@@ -147,7 +153,7 @@ public class Renderer {
         return trianglesToRender;
     }
 
-    private void drawTriangles(int[][] triangles, boolean[] trianglesToRender, Vector3[] vertices, boolean colour){
+    private void drawTriangles(int[][] triangles, boolean[] trianglesToRender, Vector3[] vertices, Color colour){
         for (int i = 0; i < triangles.length; i++){
             if (!trianglesToRender[i])
                 continue;
@@ -156,7 +162,7 @@ public class Renderer {
         }
     }
 
-    public void drawTriangle(int[] triangle, Vector3[] vertices, boolean colour){
+    public void drawTriangle(int[] triangle, Vector3[] vertices, Color colour){
         if (gc == null)
             return;
 
@@ -177,14 +183,17 @@ public class Renderer {
 
         float facingVal = isLookingAt(v1, v2, v3);
 
-        float maxColour = 0.8f;
+        float maxColour = 0.6f;
+        float offset = 0.2f;
+
         if (facingVal <= 0){
             return;
         } else {
-            gc.setFill(Color.color(facingVal * maxColour, facingVal * maxColour, facingVal * maxColour));
+            float intensity = offset + facingVal * maxColour;
+            gc.setFill(Color.color(intensity * colour.getRed(), intensity * colour.getGreen(), intensity * colour.getBlue()));
         }
 
-        if (colour){
+        if (colour != null){
             gc.fillPolygon(
                     new double[]{
                             a.x + centreX,
@@ -233,6 +242,14 @@ public class Renderer {
         toCam.normalise();
 
         return Vector3.dot(toCam, normal);
+    }
+
+    public float getAverageZ(int[] tris, Vector3[] vertices){
+        Vector3 a = vertices[tris[0]];
+        Vector3 b = vertices[tris[1]];
+        Vector3 c = vertices[tris[2]];
+        Vector3 centre = getCentre(a, b, c);
+        return cam.project(centre).z;
     }
 
     public Vector3 getCentre(Vector3 a, Vector3 b, Vector3 c){
