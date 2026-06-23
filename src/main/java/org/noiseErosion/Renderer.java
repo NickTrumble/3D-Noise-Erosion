@@ -4,6 +4,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class Renderer {
     public Camera cam;
@@ -41,86 +42,136 @@ public class Renderer {
     }
 
     public void renderSolidModel(SolidModel model){
-        int width = model.units;
-        Vector3 offset = model.offset;
-        ArrayList<Vector3> verts = new ArrayList<>();
-        ArrayList<int[]> tris = new ArrayList<>();
+        long start = System.nanoTime();
 
-        float half = model.units / 2f;
+        if (model.dirty){
 
-        for(int i = 0; i < width; i++){
-            for (int j = 0; j < width; j++) {
-                for (int k = 0; k < width; k++) {
+            int width = model.units;
+            Vector3 offset = model.offset;
+            ArrayList<Vector3> verts = new ArrayList<>();
+            ArrayList<int[]> tris = new ArrayList<>();
 
-                    if(!model.isSolid(i, j, k)) continue;
+            float half = model.units / 2f;
 
-                    float wx = offset.x + (i - half) * model.voxelSize;
-                    float wy = offset.y + (j - half) * model.voxelSize;
-                    float wz = offset.z + (k - half) * model.voxelSize;
+            for(int i = 0; i < width; i++){
+                for (int j = 0; j < width; j++) {
+                    for (int k = 0; k < width; k++) {
 
-                    if (!model.isSolid(i, j, k - 1))
-                        addFace(verts, tris,  // -k face — reversed
-                                new Vector3(wx,   wy,   wz),
-                                new Vector3(wx,   wy+model.voxelSize, wz),
-                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz),
-                                new Vector3(wx+model.voxelSize, wy,   wz)
-                        );
+                        if(!model.isSolid(i, j, k)) continue;
 
-                    if (!model.isSolid(i, j, k + 1))
-                        addFace(verts, tris, // +k face
-                                new Vector3(wx,   wy,   wz+model.voxelSize),
-                                new Vector3(wx+model.voxelSize, wy,   wz+model.voxelSize),
-                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz+model.voxelSize),
-                                new Vector3(wx,   wy+model.voxelSize, wz+model.voxelSize)
-                        );
+                        float wx = offset.x + (i - half) * model.voxelSize;
+                        float wy = offset.y + (j - half) * model.voxelSize;
+                        float wz = offset.z + (k - half) * model.voxelSize;
 
-                    if (!model.isSolid(i - 1, j, k))
-                        addFace(verts, tris, // -i face
-                                new Vector3(wx, wy,   wz),
-                                new Vector3(wx, wy,   wz+model.voxelSize),
-                                new Vector3(wx, wy+model.voxelSize, wz+model.voxelSize),
-                                new Vector3(wx, wy+model.voxelSize, wz)
-                        );
+                        if (!model.isSolid(i, j, k - 1))
+                            addFace(verts, tris,  // -k face — reversed
+                                    new Vector3(wx,   wy,   wz),
+                                    new Vector3(wx,   wy+model.voxelSize, wz),
+                                    new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz),
+                                    new Vector3(wx+model.voxelSize, wy,   wz)
+                            );
 
-                    if (!model.isSolid(i + 1, j, k))
-                        addFace(verts, tris, // +i face
-                                new Vector3(wx+model.voxelSize, wy,   wz),
-                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz),
-                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz+model.voxelSize),
-                                new Vector3(wx+model.voxelSize, wy,   wz+model.voxelSize)
-                        );
+                        if (!model.isSolid(i, j, k + 1))
+                            addFace(verts, tris, // +k face
+                                    new Vector3(wx,   wy,   wz+model.voxelSize),
+                                    new Vector3(wx+model.voxelSize, wy,   wz+model.voxelSize),
+                                    new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz+model.voxelSize),
+                                    new Vector3(wx,   wy+model.voxelSize, wz+model.voxelSize)
+                            );
 
-                    if (!model.isSolid(i, j - 1, k))
-                        addFace(verts, tris, // -j face
-                                new Vector3(wx,   wy, wz),
-                                new Vector3(wx+model.voxelSize, wy, wz),
-                                new Vector3(wx+model.voxelSize, wy, wz+model.voxelSize),
-                                new Vector3(wx,   wy, wz+model.voxelSize)
-                        );
+                        if (!model.isSolid(i - 1, j, k))
+                            addFace(verts, tris, // -i face
+                                    new Vector3(wx, wy,   wz),
+                                    new Vector3(wx, wy,   wz+model.voxelSize),
+                                    new Vector3(wx, wy+model.voxelSize, wz+model.voxelSize),
+                                    new Vector3(wx, wy+model.voxelSize, wz)
+                            );
 
-                    if (!model.isSolid(i, j + 1, k))
-                        addFace(verts, tris, // +j face
-                                new Vector3(wx,   wy+model.voxelSize, wz),
-                                new Vector3(wx,   wy+model.voxelSize, wz+model.voxelSize),
-                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz+model.voxelSize),
-                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz)
-                        );
+                        if (!model.isSolid(i + 1, j, k))
+                            addFace(verts, tris, // +i face
+                                    new Vector3(wx+model.voxelSize, wy,   wz),
+                                    new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz),
+                                    new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz+model.voxelSize),
+                                    new Vector3(wx+model.voxelSize, wy,   wz+model.voxelSize)
+                            );
+
+                        if (!model.isSolid(i, j - 1, k))
+                            addFace(verts, tris, // -j face
+                                    new Vector3(wx,   wy, wz),
+                                    new Vector3(wx+model.voxelSize, wy, wz),
+                                    new Vector3(wx+model.voxelSize, wy, wz+model.voxelSize),
+                                    new Vector3(wx,   wy, wz+model.voxelSize)
+                            );
+
+                        if (!model.isSolid(i, j + 1, k))
+                            addFace(verts, tris, // +j face
+                                    new Vector3(wx,   wy+model.voxelSize, wz),
+                                    new Vector3(wx,   wy+model.voxelSize, wz+model.voxelSize),
+                                    new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz+model.voxelSize),
+                                    new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz)
+                            );
+                    }
                 }
             }
+            model.cachedVerts = verts.toArray(new Vector3[0]);
+            tris.sort((t1, t2) -> {
+                float d1 = getAverageZ(t1, model.cachedVerts);
+                float d2 = getAverageZ(t2, model.cachedVerts);
+                return Float.compare(d2, d1);
+            });
+            model.cachedTris = tris.toArray(new int[0][]);
+
+            model.cachedTrisToRender = getTrianglesToRender(model.cachedTris, model.cachedVerts);
+
+            model.dirty = false;
+            System.out.println("dirty ruin");
         }
 
-        Vector3[] vertices = verts.toArray(new Vector3[0]);
+        Vector3[] vertices = model.cachedVerts;
 
-        tris.sort((t1, t2) -> {
-            float d1 = getAverageZ(t1, vertices);
-            float d2 = getAverageZ(t2, vertices);
-            return Float.compare(d2, d1);
-        });
-        int[][] triangles = tris.toArray(new int[0][]);
+        long start3 = System.nanoTime();
+
+        //sorting the triangles
+        int[][] triangles = backfaceCullTriangles(model.cachedTris, model.cachedVerts);
+        triangles = sortTriangles(triangles, model.cachedVerts);
+
+        long end3 = System.nanoTime();
+        System.out.println("sort triangles: " + (end3 - start3) / 1_000_000f + "ms");
+
+
+        //gettingf the triangles to render
+        long start2 = System.nanoTime();
 
         boolean[] trianglesToRender = getTrianglesToRender(triangles, vertices);
 
+        long end2 = System.nanoTime();
+        System.out.println("triangles to render: " + (end2 - start2) / 1_000_000f + "ms");
+
+
+        //drawing the triangles
+        long start4 = System.nanoTime();
+
         drawTriangles(triangles, trianglesToRender, vertices, model.colour);
+
+        long end4 = System.nanoTime();
+        System.out.println("draw triangles: " + (end4 - start4) / 1_000_000f + "ms");
+
+
+        long end = System.nanoTime();
+        System.out.println("render solid model function: " + (end - start) / 1_000_000f + "ms");
+    }
+
+    private int[][] backfaceCullTriangles(int[][] triangles, Vector3[] vertices){
+        ArrayList<int[]> visible = new ArrayList<>();
+        for (int[] tri : triangles){
+            Vector3 a = vertices[tri[0]];
+            Vector3 b = vertices[tri[1]];
+            Vector3 c = vertices[tri[2]];
+
+            if (isLookingAt(a, b, c) > 0)
+                visible.add(tri);
+        }
+        return visible.toArray(new int[0][]);
     }
 
     private void addFace(ArrayList<Vector3> verts, ArrayList<int[]> tris, Vector3 a, Vector3 b, Vector3 c, Vector3 d){
@@ -265,6 +316,19 @@ public class Renderer {
                 (a.y + b.y + c.y) / 3f,
                 (a.z + b.z + c.z) / 3f
         );
+    }
+
+    private int[][] sortTriangles(int[][] triangles, Vector3[] vertices) {
+        Vector3 forward = cam.getForward();
+        forward.normalise();
+
+        ArrayList<int[]> tris = new ArrayList<>(Arrays.asList(triangles));
+        tris.sort((t1, t2) -> {
+            float d1 = getAverageZ(t1, vertices);
+            float d2 = getAverageZ(t2, vertices);
+            return Float.compare(d2, d1);
+        });
+        return tris.toArray(new int[0][]);
     }
 
     public void clearScreen(){
