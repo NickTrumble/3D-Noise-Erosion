@@ -65,10 +65,8 @@ public class Window extends Application {
             public void handle(long now){
                 renderer.clearScreen();
                 updateCameraPos();
-                ColourMap.colourSwitch = ColourMap.ColourSwitch.WORLD;
                 if (renderer.renderWorld(world))
                     return;
-                ColourMap.colourSwitch = ColourMap.ColourSwitch.MODEL;
                 SolidModel model = solidModels.getFirst();
                 renderer.maxHeight = model.units * model.voxelSize;
                 if (renderer.renderSolids(solidModels))
@@ -76,9 +74,7 @@ public class Window extends Application {
 
                 Model hmodel = models.getFirst();
                 renderer.maxHeight = hmodel.getEdgeLength();
-                if (renderer.renderHollows(models))
-                    return;
-
+                renderer.renderHollows(models);
             }
         }.start();
     }

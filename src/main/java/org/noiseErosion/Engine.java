@@ -21,20 +21,42 @@ public class Engine {
         if (hollowModels == null)
             hollowModels = new ArrayList<>();
         hollowModels.add(model);
+        centreCameraHollow();
     }
 
     public void addModel(SolidModel model){
         if (solidModels == null)
             solidModels = new ArrayList<>();
         solidModels.add(model);
+        centreCameraSolid();
     }
 
     public void loadWorld(World world){
         this.world = world;
 
-        float cx = (world.getWorldWidth() - 1) * 4f / 2f;
-        float cy = (world.getWorldHeight() - 1) * 4f / 2f;
-        float cz = (world.getWorldDepth() - 1) * 4f / 2f;
+        float chunkSize = world.getChunkWidth() * world.getVoxelSize();
+
+        float cx = (world.getWorldWidth() - 1) * chunkSize / 2f;
+        float cy = (world.getWorldHeight() - 1) * chunkSize / 2f;
+        float cz = (world.getWorldDepth() - 1) * chunkSize / 2f;
+
+        cam.setLookat(new Vector3(cx, cy, cz));
+    }
+
+    public void centreCameraHollow(){
+        Model m = hollowModels.getFirst();
+        float cx = (m.getEdgeLength() - 1) * 4f / 2f;
+
+        cam.setLookat(new Vector3(cx, cx, cx));
+    }
+
+    public void centreCameraSolid(){
+        SolidModel sm = solidModels.getFirst();
+        float size = sm.voxelSize * sm.units;
+
+        float cx = sm.offset.x + size / 2f;
+        float cy = sm.offset.y + size / 2f;
+        float cz = sm.offset.z + size / 2f;
 
         cam.setLookat(new Vector3(cx, cy, cz));
     }

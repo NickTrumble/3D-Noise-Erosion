@@ -12,7 +12,7 @@ public class Renderer {
     public Camera cam;
     private GraphicsContext gc;
 
-    private boolean debug = false;
+    private final boolean debug = false;
 
     public Renderer(Camera cam){
         this.cam = cam;
@@ -59,6 +59,7 @@ public class Renderer {
             ArrayList<int[]> tris = new ArrayList<>();
 
             float half = model.units / 2f;
+            half = 0f;
 
             for(int i = 0; i < width; i++){
                 for (int j = 0; j < width; j++) {
@@ -292,7 +293,7 @@ public class Renderer {
             return;
         } else {
             float intensity = offset + facingVal * maxColour;
-            //gc.setFill(Color.color(intensity * colour.getRed(), intensity * colour.getGreen(), intensity * colour.getBlue()));
+            gc.setFill(Color.color(intensity * colour.getRed(), intensity * colour.getGreen(), intensity * colour.getBlue()));
             gc.setFill(ColourMap.getColour(v1.y, maxHeight, ColourMap.rainbowCMAP));
         }
 

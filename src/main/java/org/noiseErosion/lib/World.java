@@ -14,15 +14,16 @@ public class World {
     private final int chunkWidth;
     private final int seed;
 
-    private final int modelWidth = 4;
+    private final int modelWidth;
 
-    public World(int ChunksWide, int ChunksTall, int ChunksDeep, int voxelsPerChunk){
-        worldWidth = ChunksWide;
-        worldHeight = ChunksTall;
-        worldDepth = ChunksDeep;
+    public World(Vector3 worldSize, int voxelsPerChunk, int mWidth){
+        worldWidth = (int) worldSize.x;
+        worldHeight = (int) worldSize.y;
+        worldDepth = (int) worldSize.z;
         chunkWidth = voxelsPerChunk;
         chunks = new SolidModel[worldWidth][worldHeight][worldDepth];
         seed = (int)(Math.random() * 1000);
+        modelWidth = mWidth;
     }
 
 
@@ -43,4 +44,6 @@ public class World {
     public int getWorldHeight() { return worldHeight;}
     public int getWorldDepth() { return worldDepth;}
     public int getChunkWidth() { return chunkWidth;}
+    public int getModelWidth() { return modelWidth;}
+    public float getVoxelSize() { return (float) modelWidth / chunkWidth; }
 }
