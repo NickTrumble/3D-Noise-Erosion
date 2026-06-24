@@ -10,7 +10,7 @@ public class Main {
         SolidModel sm = new SolidModel(4, modelCentre, 32);
         sm.setColour(Color.GREEN);
 
-        sm.loadSolidState(Noise.apply(sm, 0.1f, 0.2f));
+        sm.loadSolidState(Noise.apply(sm, 0.1f, 0.4f));
 
 
         Engine engine = new Engine(camPosition, modelCentre);

@@ -74,4 +74,6 @@ public class Model {
         this.offset = offset;
         buildModel();
     }
+
+    public float getEdgeLength() { return edgeLength; }
 }

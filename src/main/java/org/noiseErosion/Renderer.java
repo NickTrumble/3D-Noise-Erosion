@@ -28,7 +28,7 @@ public class Renderer {
         Vector3[] vertices = model.getVertices();
         boolean[] trianglesToRender = getTrianglesToRender(triangles, vertices);
 
-        drawTriangles(triangles, trianglesToRender, vertices, null);
+        drawTriangles(triangles, trianglesToRender, vertices, null, model.getEdgeLength());
     }
 
     //solid model
@@ -139,7 +139,7 @@ public class Renderer {
         System.out.println("sort triangles: " + (end3 - start3) / 1_000_000f + "ms");
 
 
-        //gettingf the triangles to render
+        //getting the triangles to render
         long start2 = System.nanoTime();
 
         boolean[] trianglesToRender = getTrianglesToRender(triangles, vertices);
@@ -151,7 +151,7 @@ public class Renderer {
         //drawing the triangles
         long start4 = System.nanoTime();
 
-        drawTriangles(triangles, trianglesToRender, vertices, model.colour);
+        drawTriangles(triangles, trianglesToRender, vertices, model.colour, model.units * model.voxelSize);
 
         long end4 = System.nanoTime();
         System.out.println("draw triangles: " + (end4 - start4) / 1_000_000f + "ms");
@@ -204,16 +204,16 @@ public class Renderer {
         return trianglesToRender;
     }
 
-    private void drawTriangles(int[][] triangles, boolean[] trianglesToRender, Vector3[] vertices, Color colour){
+    private void drawTriangles(int[][] triangles, boolean[] trianglesToRender, Vector3[] vertices, Color colour, float maxHeight){
         for (int i = 0; i < triangles.length; i++){
             if (!trianglesToRender[i])
                 continue;
 
-            drawTriangle(triangles[i], vertices, colour);
+            drawTriangle(triangles[i], vertices, colour, maxHeight);
         }
     }
 
-    public void drawTriangle(int[] triangle, Vector3[] vertices, Color colour){
+    public void drawTriangle(int[] triangle, Vector3[] vertices, Color colour, float maxHeight){
         if (gc == null)
             return;
 
@@ -242,6 +242,7 @@ public class Renderer {
         } else {
             float intensity = offset + facingVal * maxColour;
             gc.setFill(Color.color(intensity * colour.getRed(), intensity * colour.getGreen(), intensity * colour.getBlue()));
+            gc.setFill(ColourMap.getColour(v1.y, maxHeight, ColourMap.rainbowCMAP));
         }
 
         if (colour != null){

@@ -6,6 +6,7 @@ public class Noise {
     public static boolean[][][] apply(SolidModel model, float scale, float threshold) {
         int w = model.units;
         boolean[][][] state = new boolean[w][w][w];
+        int seed = (int)(1000*Math.random());
 
         for (int i = 0; i < w; i++) {
             for (int j = 0; j < w; j++) {
@@ -14,12 +15,12 @@ public class Noise {
                     double ny = j * scale;
                     double nz = k * scale;
 
-                    float noise = OpenSimplex.noise3_ImproveXZ(0L, nx, ny, nz);
+                    float noise = OpenSimplex.noise3_ImproveXZ(seed, nx, ny, nz);
 
                     // vertical bias — carves more from the top
                     float verticalBias = (float) j / w;
 
-                    state[i][j][k] = noise + verticalBias > threshold;
+                    state[i][j][k] = noise > threshold;
                 }
             }
         }

@@ -3,7 +3,7 @@ package org.noiseErosion.lib;
  * K.jpg's OpenSimplex 2, faster variant
  */
 
-
+@SuppressWarnings("all")
 public class OpenSimplex {
 
     private static final long PRIME_X = 0x5205402B9270C86FL;
