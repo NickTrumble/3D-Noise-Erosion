@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public class Renderer {
+    public float maxHeight;
     public Camera cam;
     private GraphicsContext gc;
 
@@ -32,7 +33,7 @@ public class Renderer {
         Vector3[] vertices = model.getVertices();
         boolean[] trianglesToRender = getTrianglesToRender(triangles, vertices);
 
-        drawTriangles(triangles, trianglesToRender, vertices, null, model.getEdgeLength());
+        drawTriangles(triangles, trianglesToRender, vertices, null);
     }
 
     //solid model
@@ -154,7 +155,7 @@ public class Renderer {
         boolean[] trianglesToRender = getTrianglesToRender(triangles, vertices);
 
         //drawing the triangles
-        drawTriangles(triangles, trianglesToRender, vertices, model.colour, model.units * model.voxelSize);
+        drawTriangles(triangles, trianglesToRender, vertices, model.colour);
     }
 
     private void postDirtyRenderWithDebug(SolidModel model){
@@ -182,7 +183,7 @@ public class Renderer {
         //drawing the triangles
         long start4 = System.nanoTime();
 
-        drawTriangles(triangles, trianglesToRender, vertices, model.colour, model.units * model.voxelSize);
+        drawTriangles(triangles, trianglesToRender, vertices, model.colour);
 
         long end4 = System.nanoTime();
         System.out.println("draw triangles: " + (end4 - start4) / 1_000_000f + "ms");
@@ -229,6 +230,8 @@ public class Renderer {
                 }
             }
         }
+
+        maxHeight = world.getWorldHeight() * world.getChunkWidth() * models.getFirst().voxelSize;
         renderSolids(models);
         return true;
     }
@@ -252,16 +255,16 @@ public class Renderer {
         return trianglesToRender;
     }
 
-    private void drawTriangles(int[][] triangles, boolean[] trianglesToRender, Vector3[] vertices, Color colour, float maxHeight){
+    private void drawTriangles(int[][] triangles, boolean[] trianglesToRender, Vector3[] vertices, Color colour){
         for (int i = 0; i < triangles.length; i++){
             if (!trianglesToRender[i])
                 continue;
 
-            drawTriangle(triangles[i], vertices, colour, maxHeight);
+            drawTriangle(triangles[i], vertices, colour);
         }
     }
 
-    public void drawTriangle(int[] triangle, Vector3[] vertices, Color colour, float maxHeight){
+    public void drawTriangle(int[] triangle, Vector3[] vertices, Color colour){
         if (gc == null)
             return;
 
@@ -289,8 +292,8 @@ public class Renderer {
             return;
         } else {
             float intensity = offset + facingVal * maxColour;
-            gc.setFill(Color.color(intensity * colour.getRed(), intensity * colour.getGreen(), intensity * colour.getBlue()));
-            //gc.setFill(ColourMap.getColour(v1.y, maxHeight, ColourMap.rainbowCMAP));
+            //gc.setFill(Color.color(intensity * colour.getRed(), intensity * colour.getGreen(), intensity * colour.getBlue()));
+            gc.setFill(ColourMap.getColour(v1.y, maxHeight, ColourMap.rainbowCMAP));
         }
 
         gc.fillPolygon(

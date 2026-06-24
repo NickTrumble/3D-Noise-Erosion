@@ -4,7 +4,7 @@ import org.noiseErosion.lib.World;
 
 public class Main {
     public static void main(String[] args){
-        Vector3 camPosition = new Vector3(0, 0, 50);
+        Vector3 camPosition = new Vector3(0, 0, 20);
         Vector3 modelCentre = new Vector3(0, 0, -5);
         Vector3 modelCentre2 = new Vector3(4, 0, -5);
 
@@ -20,7 +20,7 @@ public class Main {
 
         Engine engine = new Engine(camPosition, modelCentre);
         engine.addModel(sm);
-        engine.addModel(sm2);
+        //engine.addModel(sm2);
 
         engine.loadWorld(world);
 
