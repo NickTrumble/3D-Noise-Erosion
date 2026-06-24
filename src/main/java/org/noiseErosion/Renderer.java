@@ -6,11 +6,12 @@ import org.noiseErosion.lib.World;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.stream.Collectors;
 
 public class Renderer {
     public Camera cam;
     private GraphicsContext gc;
+
+    private boolean debug = false;
 
     public Renderer(Camera cam){
         this.cam = cam;
@@ -46,6 +47,7 @@ public class Renderer {
     }
 
     public void renderSolidModel(SolidModel model){
+
         long start = System.nanoTime();
 
         if (model.dirty){
@@ -131,10 +133,14 @@ public class Renderer {
             System.out.println("Dirty run.");
         }
 
-        postDirtyRender(model);
+        if (debug)
+            postDirtyRenderWithDebug(model);
+        else
+            postDirtyRender(model);
 
         long end = System.nanoTime();
-        //System.out.println("render solid model function: " + (end - start) / 1_000_000f + "ms");
+        if (debug)
+            System.out.println("render solid model function: " + (end - start) / 1_000_000f + "ms");
     }
 
     private void postDirtyRender(SolidModel model){

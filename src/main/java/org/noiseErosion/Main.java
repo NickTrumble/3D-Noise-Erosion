@@ -1,6 +1,5 @@
 package org.noiseErosion;
 
-import javafx.scene.paint.Color;
 import org.noiseErosion.lib.World;
 
 public class Main {

@@ -71,7 +71,6 @@ public class Window extends Application {
                     return;
                 if (renderer.renderHollows(models))
                     return;
-                ;
 
             }
         }.start();

@@ -46,12 +46,6 @@ public class SolidModel {
         }
     }
 
-    public boolean combineModels(ArrayList<SolidModel> models){
-
-
-        return true;
-    }
-
     public boolean isSolid(int x, int y, int z){
         if(x < 0 || x >= units) return false;
         if(y < 0 || y >= units) return false;

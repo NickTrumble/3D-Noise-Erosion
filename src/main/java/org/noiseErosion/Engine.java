@@ -11,13 +11,6 @@ public class Engine {
     private final Renderer renderer;
     private World world;
 
-    public Engine(){
-        cam = new Camera();
-        renderer = new Renderer(cam);
-        hollowModels = new ArrayList<>();
-        solidModels = new ArrayList<>();
-    }
-
     public Engine(Vector3 campos, Vector3 camLookAt){
         cam = new Camera(campos, camLookAt, new Vector3(0, 1, 0));
         renderer = new Renderer(cam);

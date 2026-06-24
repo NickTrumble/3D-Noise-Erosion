@@ -8,7 +8,7 @@ public class Model {
     private Vector3[] vertices;
     private int[][] triangles;
     private final float edgeLength;
-    private Vector3 offset;
+    private final Vector3 offset;
 
 
 
