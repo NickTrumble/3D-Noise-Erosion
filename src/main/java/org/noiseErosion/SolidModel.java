@@ -2,6 +2,8 @@ package org.noiseErosion;
 
 import javafx.scene.paint.Color;
 
+import java.util.ArrayList;
+
 public class SolidModel {
     private final boolean[][][] solid;
     public int width;
@@ -42,6 +44,12 @@ public class SolidModel {
                 }
             }
         }
+    }
+
+    public boolean combineModels(ArrayList<SolidModel> models){
+
+
+        return true;
     }
 
     public boolean isSolid(int x, int y, int z){

@@ -70,10 +70,6 @@ public class Model {
     public int[][] getTriangles() { return triangles; }
     public Vector3[] getVertices() { return vertices; }
 
-    public void updateOffset(Vector3 offset){
-        this.offset = offset;
-        buildModel();
-    }
 
     public float getEdgeLength() { return edgeLength; }
 }

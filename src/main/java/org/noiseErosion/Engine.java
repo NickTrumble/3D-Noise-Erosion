@@ -1,5 +1,7 @@
 package org.noiseErosion;
 
+import org.noiseErosion.lib.World;
+
 import java.util.ArrayList;
 
 public class Engine {
@@ -7,6 +9,7 @@ public class Engine {
     private ArrayList<SolidModel> solidModels;
     private final Camera cam;
     private final Renderer renderer;
+    private World world;
 
     public Engine(){
         cam = new Camera();
@@ -33,7 +36,23 @@ public class Engine {
         solidModels.add(model);
     }
 
+    public void loadWorld(World world){
+        this.world = world;
+
+        float cx = (world.getWorldWidth() - 1) * 4f / 2f;
+        float cy = (world.getWorldHeight() - 1) * 4f / 2f;
+        float cz = (world.getWorldDepth() - 1) * 4f / 2f;
+
+        cam.setLookat(new Vector3(cx, cy, cz));
+    }
+
     public void start(){
-        Window.launchWindow(renderer, hollowModels, solidModels);
+        if (world == null){
+            //models
+            Window.launchWindow(renderer, hollowModels, solidModels);
+        } else {
+            //worlds
+            Window.launchWindow(renderer, world);
+        }
     }
 }

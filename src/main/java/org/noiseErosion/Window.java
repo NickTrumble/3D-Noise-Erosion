@@ -5,22 +5,34 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
+import org.noiseErosion.lib.World;
+
 import java.util.ArrayList;
 
 public class Window extends Application {
     private static Renderer renderer;
     private static ArrayList<Model> models;
     private static ArrayList<SolidModel> solidModels;
+    private static World world;
 
     private float angle = 0f;
-    private final float orbitRadius = 10f;
+    private static float orbitRadius;
 
     public static void launchWindow(Renderer r, ArrayList<Model> m, ArrayList<SolidModel> sm){
         renderer = r;
         models = m;
         solidModels = sm;
+        orbitRadius = renderer.cam.getPosition().z;
+        Application.launch(Window.class);
+    }
+
+    public static void launchWindow(Renderer r, World w){
+        renderer = r;
+        world = w;
+        orbitRadius = renderer.cam.getPosition().z;
         Application.launch(Window.class);
     }
 
@@ -28,6 +40,15 @@ public class Window extends Application {
     public void start(Stage stage){
         Canvas canvas = new Canvas(Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT);
         GraphicsContext gc = canvas.getGraphicsContext2D();
+
+        canvas.addEventFilter(ScrollEvent.SCROLL, scrollEvent -> {
+            double delta = scrollEvent.getDeltaY();
+            if (delta != 0) {
+                orbitRadius -= (float) (delta / 40f);
+                orbitRadius = Math.max(5f, orbitRadius);
+            }
+
+        });
 
         renderer.setGraphicsContext(gc);
         Pane root = new Pane(canvas);
@@ -43,9 +64,15 @@ public class Window extends Application {
             @Override
             public void handle(long now){
                 renderer.clearScreen();
-                renderer.renderHollows(models);
-                renderer.renderSolids(solidModels);
                 updateCameraPos();
+                if (renderer.renderWorld(world))
+                    return;
+                if (renderer.renderSolids(solidModels))
+                    return;
+                if (renderer.renderHollows(models))
+                    return;
+                ;
+
             }
         }.start();
     }

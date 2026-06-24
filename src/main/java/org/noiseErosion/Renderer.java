@@ -2,9 +2,11 @@ package org.noiseErosion;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import org.noiseErosion.lib.World;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 public class Renderer {
     public Camera cam;
@@ -15,12 +17,13 @@ public class Renderer {
     }
 
     //hollow models
-    public void renderHollows(ArrayList<Model> models){
+    public boolean renderHollows(ArrayList<Model> models){
         if (models == null)
-            return;
+            return false;
         for (Model model : models){
             renderHollowModel(model);
         }
+        return true;
     }
 
     public void renderHollowModel(Model model){
@@ -33,12 +36,13 @@ public class Renderer {
 
     //solid model
 
-    public void renderSolids(ArrayList<SolidModel> models){
+    public boolean renderSolids(ArrayList<SolidModel> models){
         if (models == null)
-            return;
+            return false;
         for (SolidModel model : models){
             renderSolidModel(model);
         }
+        return true;
     }
 
     public void renderSolidModel(SolidModel model){
@@ -124,9 +128,30 @@ public class Renderer {
             model.cachedTrisToRender = getTrianglesToRender(model.cachedTris, model.cachedVerts);
 
             model.dirty = false;
-            System.out.println("dirty ruin");
+            System.out.println("Dirty run.");
         }
 
+        postDirtyRender(model);
+
+        long end = System.nanoTime();
+        //System.out.println("render solid model function: " + (end - start) / 1_000_000f + "ms");
+    }
+
+    private void postDirtyRender(SolidModel model){
+        Vector3[] vertices = model.cachedVerts;
+
+        //sorting the triangles
+        int[][] triangles = backfaceCullTriangles(model.cachedTris, model.cachedVerts);
+        triangles = sortTriangles(triangles, model.cachedVerts);
+
+        //getting the triangles to render
+        boolean[] trianglesToRender = getTrianglesToRender(triangles, vertices);
+
+        //drawing the triangles
+        drawTriangles(triangles, trianglesToRender, vertices, model.colour, model.units * model.voxelSize);
+    }
+
+    private void postDirtyRenderWithDebug(SolidModel model){
         Vector3[] vertices = model.cachedVerts;
 
         long start3 = System.nanoTime();
@@ -155,10 +180,6 @@ public class Renderer {
 
         long end4 = System.nanoTime();
         System.out.println("draw triangles: " + (end4 - start4) / 1_000_000f + "ms");
-
-
-        long end = System.nanoTime();
-        System.out.println("render solid model function: " + (end - start) / 1_000_000f + "ms");
     }
 
     private int[][] backfaceCullTriangles(int[][] triangles, Vector3[] vertices){
@@ -183,6 +204,27 @@ public class Renderer {
 
         tris.add(new int[] { index, index + 1, index + 2 });
         tris.add(new int[] { index, index + 2, index + 3 });
+    }
+
+    //world
+
+    public boolean renderWorld(World world){
+        if (world == null)
+            return false;
+
+        ArrayList<SolidModel> models = new ArrayList<>();
+
+        for (SolidModel[][] plane : world.chunks) {
+            for (SolidModel[] row : plane) {
+                for (SolidModel model : row) {
+                    if (model != null) {
+                        models.add(model);
+                    }
+                }
+            }
+        }
+        renderSolids(models);
+        return true;
     }
 
     //needed for both versions
@@ -242,38 +284,22 @@ public class Renderer {
         } else {
             float intensity = offset + facingVal * maxColour;
             gc.setFill(Color.color(intensity * colour.getRed(), intensity * colour.getGreen(), intensity * colour.getBlue()));
-            gc.setFill(ColourMap.getColour(v1.y, maxHeight, ColourMap.rainbowCMAP));
+            //gc.setFill(ColourMap.getColour(v1.y, maxHeight, ColourMap.rainbowCMAP));
         }
 
-        if (colour != null){
-            gc.fillPolygon(
-                    new double[]{
-                            a.x + centreX,
-                            b.x + centreX,
-                            c.x + centreX
-                    },
-                    new double[]{
-                            a.y + centreY,
-                            b.y + centreY,
-                            c.y + centreY
-                    },
-                    3);
-        }
-        else{
-            gc.strokePolygon(
-                    new double[]{
-                            a.x + centreX,
-                            b.x + centreX,
-                            c.x + centreX
-                    },
-                    new double[]{
-                            a.y + centreY,
-                            b.y + centreY,
-                            c.y + centreY
-                    },
-                    3
-            );
-        }
+        gc.fillPolygon(
+                new double[]{
+                        a.x + centreX,
+                        b.x + centreX,
+                        c.x + centreX
+                },
+                new double[]{
+                        a.y + centreY,
+                        b.y + centreY,
+                        c.y + centreY
+                },
+                3);
+
     }
 
     public Vector3 getNormal(Vector3 a, Vector3 b, Vector3 c){
