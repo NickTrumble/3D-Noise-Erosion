@@ -13,7 +13,7 @@ public class Main {
         sm.loadSolidState(Noise.apply(sm, 0.1f, 0.4f));
 
         int mWidth = 4;
-        int chunks = 2;
+        int chunks = 8;
         World world = new World(new Vector3(chunks, chunks, chunks), 8, mWidth);
         world.generateWorld();
 

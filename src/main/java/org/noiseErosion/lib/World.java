@@ -34,7 +34,7 @@ public class World {
                     SolidModel sm = new SolidModel(modelWidth, new Vector3(i * modelWidth, j * modelWidth, k * modelWidth), chunkWidth);
                     chunks[i][j][k] = sm;
                     chunks[i][j][k].setColour(Color.GREEN);
-                    chunks[i][j][k].loadSolidState(Noise.apply(sm, 0.1f, 0.5f, new Vector3(i, j, k), seed));
+                    chunks[i][j][k].loadSolidState(Noise.apply(sm, 0.03f, 0.5f, new Vector3(i, j, k), seed));
                 }
             }
         }

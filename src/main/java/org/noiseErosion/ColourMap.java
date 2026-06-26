@@ -9,23 +9,20 @@ public class ColourMap {
 
     //-units / 2 to units / 2
     public static Color getColour(float j, float maxHeight, Color[] cmap){
+
         float t = (j) / maxHeight;
         float spacing = 1f / (cmap.length - 1);
 
         int i0 = (int) (t / spacing);
         float rem = (t - i0 * spacing) / spacing;
 
-        if (j < 0)
-            System.out.println(j);
-
-        if (i0 < 0){
-            System.out.println(j);
-            System.out.println(t);
-            System.out.println(i0);
-
-            System.out.println(maxHeight + "\n");
-        }
         int i1 = Math.min(i0 + 1, cmap.length - 1);
+//        if (j <=-1.0) {
+//            System.out.println("how on earth does this work: " + j);
+//            System.out.println("i0:" + i0 + ", i1:" + i1);
+//            System.out.println("t/spacing: " + t / spacing);
+//            System.out.println("int^^: " + (int)(t / spacing));
+//        }
         return lerp(cmap[i0], cmap[i1], rem).darker();
     }
 

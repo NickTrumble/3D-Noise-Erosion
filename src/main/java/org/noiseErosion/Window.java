@@ -107,7 +107,7 @@ public class Window extends Application {
             public void handle(long now){
                 renderer.clearScreen();
                 if (spinCamera)
-                    updateCameraPos(0.001f);
+                    updateCameraPos(0.01f);
                 if (renderer.renderWorld(world))
                     return;
                 SolidModel model = solidModels.getFirst();
