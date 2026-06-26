@@ -27,6 +27,10 @@ public class Window extends Application {
 
     private boolean spinCamera = true;
 
+    private long lastFPS = 0;
+    private int frames = 0;
+    private float fps;
+
     public static void launchWindow(Renderer r, ArrayList<SolidModel> sm){
         renderer = r;
         solidModels = sm;
@@ -108,14 +112,41 @@ public class Window extends Application {
                 renderer.clearScreen();
                 if (spinCamera)
                     updateCameraPos(0.01f);
-                if (renderer.renderWorld(world))
+                if (renderer.renderWorld(world)) {
+                    updateFPS(now, stage);
                     return;
+                }
                 SolidModel model = solidModels.getFirst();
                 renderer.maxHeight = model.units * model.voxelSize;
-                if (renderer.renderSolids(solidModels))
+                if (renderer.renderSolids(solidModels)) {
+                    updateFPS(now, stage);
                     return;
+                }
+
+                updateFPS(now, stage);
             }
         }.start();
+    }
+
+    private void updateFPS(long now, Stage stage){
+        frames++;
+
+        if (lastFPS == 0){
+            lastFPS = now;
+            return;
+        }
+
+        long elapsed = now - lastFPS;
+
+        if (elapsed >= 1_000_000_000L){
+            fps = (float) (frames * 1_000_000_000L) / elapsed;
+            String title = "Noise Erosion";
+            String FPS = String.format("%.2f", fps);
+            stage.setTitle(title + " | FPS: " + FPS);
+
+            frames = 0;
+            lastFPS = 0;
+        }
     }
 
     public void updateCameraPos(float angleIncrement){

@@ -20,6 +20,7 @@ public class Renderer {
     private Color[] cachedColours;
     private int[] visibleTriangleIndexes;
     private float[] triangleDepths;
+    private float[] chunkDepths;
 
     private double[] triangleX;
     private double[] triangleY;
@@ -38,6 +39,8 @@ public class Renderer {
     private float modelVoxelsize;
     private int modelChunks;
     private int modelWidth;
+
+
 
     public Renderer(Camera cam){
         this.cam = cam;
@@ -63,9 +66,14 @@ public class Renderer {
         colourTime = 0f;
         setFillTime = 0f;
         indexTime = 0f;
+
+        getChunkDepths(models);
+        sortChunks(models.size(), models);
+
         for (SolidModel model : models){
             renderSolidModel(model);
         }
+
         if (debug){
             System.out.println("Sort time: " + sortTime + "ms");
             System.out.println("Cull time: " + cullTime + "ms");
@@ -77,6 +85,46 @@ public class Renderer {
 
         }
         return true;
+    }
+
+    public void getChunkDepths(ArrayList<SolidModel> models){
+        int len = models.size();
+        if (chunkDepths == null ||
+            chunkDepths.length < len)
+            chunkDepths = new float[len];
+
+        Vector3 forward = cam.getForward();
+        forward.normalise();
+        Vector3 pos = cam.getPosition();
+        for (int i = 0; i < len; i++) {
+            chunkDepths[i] = getChunkDepth(models.get(i), forward, pos);
+        }
+
+    }
+
+    public float getChunkDepth(SolidModel model, Vector3 forward, Vector3 pos){
+        Vector3 offset = model.offset;
+        float x = offset.x - pos.x;
+        float y = offset.y - pos.y;
+        float z = offset.z - pos.z;
+
+        return x * forward.x + y * forward.y + z * forward.z;
+    }
+
+    public void sortChunks(int count, ArrayList<SolidModel> models){
+        for (int i = 1; i < count; i++) {
+            float depth = chunkDepths[i];
+            SolidModel model = models.get(i);
+
+            int j = i - 1;
+            while(j >= 0 && chunkDepths[j] < depth){
+                chunkDepths[j + 1] = chunkDepths[j];
+                models.set(j + 1, models.get(j));
+                j--;
+            }
+            models.set(j + 1, model);
+            chunkDepths[j + 1] = depth;
+        }
     }
 
     public void renderSolidModel(SolidModel model){
@@ -376,8 +424,8 @@ public class Renderer {
             int i1 = triangle[1];
             int i2 = triangle[2];
 
-            if (!projectedToRender[i0] &&
-                !projectedToRender[i1] &&
+            if (!projectedToRender[i0] ||
+                !projectedToRender[i1] ||
                 !projectedToRender[i2]){
                 continue;
             }
