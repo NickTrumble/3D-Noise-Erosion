@@ -5,6 +5,8 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
@@ -20,6 +22,11 @@ public class Window extends Application {
 
     private float angle = 0f;
     private static float orbitRadius;
+    private float manualSpinAmount = 0.1f;
+    private float orbitRadiusChange = 5f;
+    private float movementStep = 1f;
+
+    private boolean spinCamera = true;
 
     public static void launchWindow(Renderer r, ArrayList<Model> m, ArrayList<SolidModel> sm){
         renderer = r;
@@ -50,12 +57,46 @@ public class Window extends Application {
 
         });
 
+        canvas.addEventFilter(KeyEvent.KEY_PRESSED, keyEvent -> {
+            KeyCode key = keyEvent.getCode();
+            System.out.println(key);
+            switch (key){
+                //ROTATIONS
+                case KeyCode.SPACE:
+                    spinCamera = !spinCamera;
+                    break;
+                case KeyCode.E:
+                    updateCameraPos(manualSpinAmount);
+                    break;
+                case KeyCode.Q:
+                    updateCameraPos(-manualSpinAmount);
+                    break;
+                //MOVEMENT
+                case KeyCode.W:
+                    updateOrbitRadius(orbitRadiusChange);
+                    break;
+                case KeyCode.S:
+                    updateOrbitRadius(-orbitRadiusChange);
+                    break;
+                case KeyCode.D:
+                    moveCameraSideways(movementStep);
+                    break;
+                case A:
+                    moveCameraSideways(-movementStep);
+                    break;
+                default:
+                    break;
+            }
+        });
+
         renderer.setGraphicsContext(gc);
         Pane root = new Pane(canvas);
 
         stage.setScene(new Scene(root));
         stage.setTitle("Noise Erosion");
         stage.show();
+
+        canvas.requestFocus();
 
         renderer.renderHollows(models);
 
@@ -64,7 +105,8 @@ public class Window extends Application {
             @Override
             public void handle(long now){
                 renderer.clearScreen();
-                updateCameraPos();
+                if (spinCamera)
+                    updateCameraPos(0.001f);
                 if (renderer.renderWorld(world))
                     return;
                 SolidModel model = solidModels.getFirst();
@@ -79,17 +121,19 @@ public class Window extends Application {
         }.start();
     }
 
-    public void updateCameraPos(){
-        angle += 0.001f;
-
-        Vector3 lookat = renderer.cam.getLookat();
-
-        float camX = lookat.x + (float) Math.cos(angle) * orbitRadius;
-        float camZ = lookat.z + (float) Math.sin(angle) * orbitRadius;
-        float camY = renderer.cam.getPosition().y;
-
-        renderer.cam.setPosition(new Vector3(camX, camY, camZ));
+    public void updateCameraPos(float angleIncrement){
+        renderer.cam.rotateCam(angleIncrement, orbitRadius);
     }
 
+    public void updateOrbitRadius(float increment){
+        orbitRadius = Math.max(1, orbitRadius - increment);
+    }
 
+    public void moveCameraSideways(float increment){
+        Vector3 right = renderer.cam.getRight();
+        right.normalise();
+        right.multiply(-increment);
+        renderer.cam.moveCamera(right);
+        System.out.println(right);
+    }
 }

@@ -1,9 +1,15 @@
 package org.noiseErosion;
 
+import javafx.css.converter.DeriveColorConverter;
+
+import java.util.Vector;
+
 public class Camera {
     private Vector3 position;
     private Vector3 lookat;
     private Vector3 up;
+
+    private float angle = 0f;
 
     public Camera(){
         position = new Vector3(0, 0, -5); //5 back
@@ -78,7 +84,25 @@ public class Camera {
         return new Vector3(screenX, screenY, cz);
     }
 
-//getters and setters
+
+    public void rotateCam(float angleIncrement, float orbitRadius){
+        angle += angleIncrement;
+        Vector3 lookat = getLookat();
+
+        float camX = lookat.x + (float) Math.cos(angle) * orbitRadius;
+        float camZ = lookat.z + (float) Math.sin(angle) * orbitRadius;
+        float camY = this.position.y;
+
+        setPosition(new Vector3(camX, camY, camZ));
+    }
+
+    public void moveCamera(Vector3 change){
+        lookat.add(change);
+        position.add(change);
+    }
+
+
+    //getters and setters
     public void setPosition(Vector3 position) { this.position = position; }
     public void setLookat(Vector3 lookat) { this.lookat = lookat; }
     public void setUp(Vector3 up) { this.up = up;}
@@ -92,6 +116,11 @@ public class Camera {
                 lookat.y - position.y,
                 lookat.z - position.z
         );
+    }
+    public Vector3 getRight(){
+        Vector3 forward = getForward();
+        Vector3 up = getUp();
+        return up.cross(forward);
     }
 
 //override methods

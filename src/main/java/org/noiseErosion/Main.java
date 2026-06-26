@@ -16,7 +16,7 @@ public class Main {
 
         sm.loadSolidState(Noise.apply(sm, 0.1f, 0.4f));
 
-        World world = new World(new Vector3(4,4,4), 8, 4);
+        World world = new World(new Vector3(2,2,2), 8, 4);
         world.generateWorld();
 
 
