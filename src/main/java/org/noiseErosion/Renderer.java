@@ -12,7 +12,16 @@ public class Renderer {
     public Camera cam;
     private GraphicsContext gc;
 
-    private final boolean debug = false;
+    private float[] projectedX;
+    private float[] projectedY;
+    private float[] projectedZ;
+    private boolean[] projectedToRender;
+
+    private double[] triangleX;
+    private double[] triangleY;
+
+
+    private final boolean debug = true;
 
     public Renderer(Camera cam){
         this.cam = cam;
@@ -132,7 +141,6 @@ public class Renderer {
             model.cachedTrisToRender = getTrianglesToRender(model.cachedTris, model.cachedVerts);
 
             model.dirty = false;
-            System.out.println("Dirty run.");
         }
 
         if (debug)
@@ -247,6 +255,52 @@ public class Renderer {
         return verticesToRender;
     }
 
+    private void getProjectedPoints(Vector3[] vertices){
+        int length = vertices.length;
+        if (projectedX == null || projectedX.length < length) {
+            projectedX = new float[length];
+            projectedY = new float[length];
+            projectedZ = new float[length];
+            projectedToRender = new boolean[length];
+
+            triangleX = new double[3];
+            triangleY = new double[3];
+        }
+
+        Vector3 position = cam.getPosition();
+        Vector3 forward = cam.getForward();
+        forward.normalise();
+        Vector3 right = cam.getRight();
+        right.normalise();
+        Vector3 trueUp = right.cross(forward);
+
+        float focalLength = 500f;
+
+        for (int i = 0; i < length; i++) {
+            Vector3 v = vertices[i];
+
+            float x = v.x - position.x;
+            float y = v.y - position.y;
+            float z = v.z - position.z;
+
+
+            float cameraX = x * right.x + y * right.y + z * right.z;
+            float cameraY = x * trueUp.x + y * trueUp.y + z * trueUp.z;
+            float cameraZ = x * forward.x + y * forward.y + z * forward.z;
+
+            if (cameraZ < 0){
+                projectedToRender[i] = false;
+                continue;
+            }
+
+            projectedX[i] = cameraX * focalLength / cameraZ;
+            projectedY[i] = cameraY * focalLength / cameraZ;
+            projectedZ[i] = cameraZ;
+
+            projectedToRender[i] = true;
+        }
+    }
+
     private boolean[] getTrianglesToRender(int[][] triangles, Vector3[] vertices){
         boolean[] verticesToRender = getVerticesToRender(vertices);
         boolean[] trianglesToRender = new boolean[triangles.length];
@@ -257,12 +311,45 @@ public class Renderer {
     }
 
     private void drawTriangles(int[][] triangles, boolean[] trianglesToRender, Vector3[] vertices, Color colour){
-        for (int i = 0; i < triangles.length; i++){
-            if (!trianglesToRender[i])
-                continue;
+//        for (int i = 0; i < triangles.length; i++){
+//            if (!trianglesToRender[i])
+//                continue;
+//
+//            drawTriangle(triangles[i], vertices, colour);
 
-            drawTriangle(triangles[i], vertices, colour);
-        }
+            getProjectedPoints(vertices);
+            int centreX = Config.SCREEN_WIDTH / 2;
+            int centreY = Config.SCREEN_HEIGHT / 2;
+
+            for (int j = 0; j < triangles.length; j++) {
+
+                int[] triangle = triangles[j];
+
+                int i0 = triangle[0];
+                int i1 = triangle[1];
+                int i2 = triangle[2];
+
+                if (!projectedToRender[i0] &&
+                    !projectedToRender[i1] &&
+                    !projectedToRender[i2]){
+                    continue;
+                }
+
+                triangleX[0] = projectedX[i0] + centreX;
+                triangleX[1] = projectedX[i1] + centreX;
+                triangleX[2] = projectedX[i2] + centreX;
+
+                triangleY[0] = projectedY[i0] + centreY;
+                triangleY[1] = projectedY[i1] + centreY;
+                triangleY[2] = projectedY[i2] + centreY;
+
+
+                gc.setFill(ColourMap.getColour(vertices[i0].y, maxHeight, ColourMap.rainbowCMAP));
+
+                gc.fillPolygon(triangleX, triangleY, 3);
+
+            }
+        //}
     }
 
     public void drawTriangle(int[] triangle, Vector3[] vertices, Color colour){

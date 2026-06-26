@@ -64,6 +64,8 @@ public class Window extends Application {
                 //ROTATIONS
                 case SPACE:
                     spinCamera = !spinCamera;
+                    String title = spinCamera ? "Noise Erosion" : "Noise Erosion - Paused";
+                    stage.setTitle(title);
                     break;
                 case E:
                     updateCameraPos(manualSpinAmount);
