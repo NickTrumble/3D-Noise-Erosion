@@ -21,7 +21,7 @@ public class Window extends Application {
     private static World world;
 
     private float angle = 0f;
-    private static float orbitRadius;
+    private static float orbitRadius = -5f;
     private float manualSpinAmount = 0.1f;
     private float orbitRadiusChange = 5f;
     private float movementStep = 1f;
@@ -45,6 +45,7 @@ public class Window extends Application {
 
     @Override
     public void start(Stage stage){
+        Config.DEFAULT_ORBIT = renderer.cam.getPosition().z;
         Canvas canvas = new Canvas(Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT);
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
@@ -59,30 +60,32 @@ public class Window extends Application {
 
         canvas.addEventFilter(KeyEvent.KEY_PRESSED, keyEvent -> {
             KeyCode key = keyEvent.getCode();
-            System.out.println(key);
             switch (key){
                 //ROTATIONS
-                case KeyCode.SPACE:
+                case SPACE:
                     spinCamera = !spinCamera;
                     break;
-                case KeyCode.E:
+                case E:
                     updateCameraPos(manualSpinAmount);
                     break;
-                case KeyCode.Q:
+                case Q:
                     updateCameraPos(-manualSpinAmount);
                     break;
                 //MOVEMENT
-                case KeyCode.W:
+                case W:
                     updateOrbitRadius(orbitRadiusChange);
                     break;
-                case KeyCode.S:
+                case S:
                     updateOrbitRadius(-orbitRadiusChange);
                     break;
-                case KeyCode.D:
+                case D:
                     moveCameraSideways(movementStep);
                     break;
                 case A:
                     moveCameraSideways(-movementStep);
+                    break;
+                case R:
+                    resetCamera();
                     break;
                 default:
                     break;
@@ -126,7 +129,8 @@ public class Window extends Application {
     }
 
     public void updateOrbitRadius(float increment){
-        orbitRadius = Math.max(1, orbitRadius - increment);
+        orbitRadius -= increment;
+        renderer.cam.rotateCam(0f, orbitRadius);
     }
 
     public void moveCameraSideways(float increment){
@@ -134,6 +138,10 @@ public class Window extends Application {
         right.normalise();
         right.multiply(-increment);
         renderer.cam.moveCamera(right);
-        System.out.println(right);
+    }
+
+    public void resetCamera(){
+        orbitRadius = Config.DEFAULT_ORBIT;
+        renderer.cam.resetCamera();
     }
 }

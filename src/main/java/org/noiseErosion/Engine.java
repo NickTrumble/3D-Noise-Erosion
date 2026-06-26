@@ -13,6 +13,8 @@ public class Engine {
 
     public Engine(Vector3 campos, Vector3 camLookAt){
         cam = new Camera(campos, camLookAt, new Vector3(0, 1, 0));
+        Config.DEFAULT_LOOKAT = camLookAt;
+        Config.DEFAULT_POSITION = campos;
         renderer = new Renderer(cam);
         hollowModels = new ArrayList<>();
     }

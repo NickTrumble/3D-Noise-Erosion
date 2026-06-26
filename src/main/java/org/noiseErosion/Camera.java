@@ -101,6 +101,11 @@ public class Camera {
         position.add(change);
     }
 
+    public void resetCamera(){
+        lookat = new Vector3(Config.DEFAULT_LOOKAT);
+        position = new Vector3(Config.DEFAULT_POSITION);
+        angle = (float) (- Math.PI / 2f);
+    }
 
     //getters and setters
     public void setPosition(Vector3 position) { this.position = position; }
