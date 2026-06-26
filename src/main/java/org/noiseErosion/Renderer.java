@@ -18,6 +18,8 @@ public class Renderer {
     private boolean[] projectedToRender;
 
     private Color[] cachedColours;
+    private int[] visibleTriangleIndexes;
+    private float[] triangleDepths;
 
     private double[] triangleX;
     private double[] triangleY;
@@ -148,11 +150,6 @@ public class Renderer {
                 }
             }
             model.cachedVerts = verts.toArray(new Vector3[0]);
-            tris.sort((t1, t2) -> {
-                float d1 = getAverageZ(t1, model.cachedVerts);
-                float d2 = getAverageZ(t2, model.cachedVerts);
-                return Float.compare(d2, d1);
-            });
             model.cachedTris = tris.toArray(new int[0][]);
 
             model.dirty = false;
@@ -168,28 +165,26 @@ public class Renderer {
         Vector3[] vertices = model.cachedVerts;
 
         //sorting the triangles
-        int[][] triangles = backfaceCullTriangles(model.cachedTris, model.cachedVerts);
-        triangles = sortTriangles(triangles, model.cachedVerts);
+        int count = backfaceCullTriangles(model.cachedTris, model.cachedVerts);
+        sortTriangles(count);
 
         //getting the triangles to render
 
         //drawing the triangles
-        drawTriangles(triangles, vertices, model.colour);
+        drawTriangles(model.cachedTris, vertices, model.colour, count);
     }
 
     private void postDirtyRenderWithDebug(SolidModel model){
         Vector3[] vertices = model.cachedVerts;
 
-
-
         long start = System.nanoTime();
         //sorting the triangles
-        int[][] triangles = backfaceCullTriangles(model.cachedTris, model.cachedVerts);
+        int count = backfaceCullTriangles(model.cachedTris, model.cachedVerts);
         long end = System.nanoTime();
         cullTime += (end - start) / 1_000_000f;
 
         long start3 = System.nanoTime();
-        triangles = sortTriangles(triangles, model.cachedVerts);
+        sortTriangles(count);
 
         long end3 = System.nanoTime();
         sortTime += (end3 - start3) / 1_000_000f;
@@ -198,24 +193,49 @@ public class Renderer {
         //drawing the triangles
         long start4 = System.nanoTime();
 
-        drawTriangles(triangles, vertices, model.colour);
+        drawTriangles(model.cachedTris, vertices, model.colour, count);
 
         long end4 = System.nanoTime();
         drawTime += (end4 - start4) / 1_000_000f;
         //System.out.println("draw triangles: " + (end4 - start4) / 1_000_000f + "ms");
     }
 
-    private int[][] backfaceCullTriangles(int[][] triangles, Vector3[] vertices){
-        ArrayList<int[]> visible = new ArrayList<>();
-        for (int[] tri : triangles){
-            Vector3 a = vertices[tri[0]];
-            Vector3 b = vertices[tri[1]];
-            Vector3 c = vertices[tri[2]];
-
-            if (isLookingAt(a, b, c) > 0)
-                visible.add(tri);
+    private int backfaceCullTriangles(int[][] triangles, Vector3[] vertices){
+        if (visibleTriangleIndexes == null ||
+            visibleTriangleIndexes.length < triangles.length){
+            visibleTriangleIndexes = new int[triangles.length];
+            triangleDepths = new float[triangles.length];
         }
-        return visible.toArray(new int[0][]);
+
+
+        Vector3 camPos = cam.getPosition();
+        Vector3 forward = cam.getForward();
+        forward.normalise();
+
+        int count = 0;
+        for (int i = 0; i < triangles.length; i++) {
+            Vector3 a = vertices[triangles[i][0]];
+            Vector3 b = vertices[triangles[i][1]];
+            Vector3 c = vertices[triangles[i][2]];
+
+            if (isLookingAt(a, b, c)) {
+                visibleTriangleIndexes[count] = i;
+                triangleDepths[count++] = getAverageZ(triangles[i], vertices, camPos, forward);
+            }
+        }
+        return count;
+    }
+
+    private float getAverageZ(int[] triangle, Vector3[] vertices, Vector3 camPos, Vector3 forward){
+        Vector3 a = vertices[triangle[0]];
+        Vector3 b = vertices[triangle[1]];
+        Vector3 c = vertices[triangle[2]];
+
+        float x = (a.x + b.x + c.x) / 3f - camPos.x;
+        float y = (a.y + b.y + c.y) / 3f - camPos.y;
+        float z = (a.z + b.z + c.z) / 3f - camPos.z;
+
+        return x * forward.x + y * forward.y + z * forward.z;
     }
 
     private void addFace(ArrayList<Vector3> verts, ArrayList<int[]> tris, Vector3 a, Vector3 b, Vector3 c, Vector3 d){
@@ -340,7 +360,7 @@ public class Renderer {
         return trianglesToRender;
     }
 
-    private void drawTriangles(int[][] triangles, Vector3[] vertices, Color colour){
+    private void drawTriangles(int[][] triangles, Vector3[] vertices, Color colour, int count){
         //not a bottleneck
         getProjectedPoints(vertices);
 
@@ -348,9 +368,9 @@ public class Renderer {
         int centreY = Config.SCREEN_HEIGHT / 2;
 
         int lastIndex = -1;
-        for (int j = 0; j < triangles.length; j++) {
+        for (int j = 0; j < count; j++) {
             //not a bottleneck
-            int[] triangle = triangles[j];
+            int[] triangle = triangles[visibleTriangleIndexes[j]];
 
             int i0 = triangle[0];
             int i1 = triangle[1];
@@ -385,24 +405,34 @@ public class Renderer {
         }
     }
 
-    public Vector3 getNormal(Vector3 a, Vector3 b, Vector3 c){
-        Vector3 ab = Vector3.subtract(b, a);
-        Vector3 ac = Vector3.subtract(c, a);
+    public boolean isLookingAt(Vector3 a, Vector3 b, Vector3 c){
+        //centre
+        float cx = (a.x + b.x + c.x) / 3f;
+        float cy = (a.y + b.y + c.y) / 3f;
+        float cz = (a.z + b.z + c.z) / 3f;
 
-        Vector3 normal = ab.cross(ac);
-        normal.normalise();
-        return normal;
-    }
+        //vector ab = b - a
+        float abx = b.x - a.x;
+        float aby = b.y - a.y;
+        float abz = b.z - a.z;
 
-    public float isLookingAt(Vector3 a, Vector3 b, Vector3 c){
-        Vector3 centre = getCentre(a, b, c);
+        //vector ac = c - a
+        float acx = c.x - a.x;
+        float acy = c.y - a.y;
+        float acz = c.z - a.z;
 
-        Vector3 normal = getNormal(a, b, c);
+        //normal
+        float nx = aby * acz - abz * acy;
+        float ny = abz * acx - abx * acz;
+        float nz = abx * acy - aby * acx;
 
-        Vector3 toCam = Vector3.subtract(cam.getPosition(), centre);
-        toCam.normalise();
+        //toCam
+        float camX = cam.getPosition().x - cx;
+        float camY = cam.getPosition().y - cy;
+        float camZ = cam.getPosition().z - cz;
 
-        return Vector3.dot(toCam, normal);
+        //toCam dot normal
+        return camX * nx + camY * ny + camZ * nz > 0f;
     }
 
     public float getAverageZ(int[] tris, Vector3[] vertices){
@@ -440,6 +470,25 @@ public class Renderer {
         });
         return tris.toArray(new int[0][]);
     }
+
+    //insertion sort
+    private void sortTriangles(int count){
+        for (int i = 1; i < count; i++) {
+            int index = visibleTriangleIndexes[i];
+            float depth = triangleDepths[i];
+
+            int j = i - 1;
+            while(j >= 0 && triangleDepths[j] < depth){
+                visibleTriangleIndexes[j + 1] = visibleTriangleIndexes[j];
+                triangleDepths[j + 1] = triangleDepths[j];
+                j--;
+            }
+
+            visibleTriangleIndexes[j + 1] = index;
+            triangleDepths[j + 1] = depth;
+        }
+    }
+
 
     public void clearScreen(){
         gc.clearRect(0, 0, Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT);
