@@ -26,25 +26,6 @@ public class Renderer {
     public Renderer(Camera cam){
         this.cam = cam;
     }
-
-    //hollow models
-    public boolean renderHollows(ArrayList<Model> models){
-        if (models == null)
-            return false;
-        for (Model model : models){
-            renderHollowModel(model);
-        }
-        return true;
-    }
-
-    public void renderHollowModel(Model model){
-        int[][] triangles = model.getTriangles();
-        Vector3[] vertices = model.getVertices();
-        boolean[] trianglesToRender = getTrianglesToRender(triangles, vertices);
-
-        drawTriangles(triangles, trianglesToRender, vertices, null);
-    }
-
     //solid model
 
     public boolean renderSolids(ArrayList<SolidModel> models){
@@ -161,10 +142,9 @@ public class Renderer {
         triangles = sortTriangles(triangles, model.cachedVerts);
 
         //getting the triangles to render
-        boolean[] trianglesToRender = getTrianglesToRender(triangles, vertices);
 
         //drawing the triangles
-        drawTriangles(triangles, trianglesToRender, vertices, model.colour);
+        drawTriangles(triangles, vertices, model.colour);
     }
 
     private void postDirtyRenderWithDebug(SolidModel model){
@@ -183,8 +163,6 @@ public class Renderer {
         //getting the triangles to render
         long start2 = System.nanoTime();
 
-        boolean[] trianglesToRender = getTrianglesToRender(triangles, vertices);
-
         long end2 = System.nanoTime();
         System.out.println("triangles to render: " + (end2 - start2) / 1_000_000f + "ms");
 
@@ -192,7 +170,7 @@ public class Renderer {
         //drawing the triangles
         long start4 = System.nanoTime();
 
-        drawTriangles(triangles, trianglesToRender, vertices, model.colour);
+        drawTriangles(triangles, vertices, model.colour);
 
         long end4 = System.nanoTime();
         System.out.println("draw triangles: " + (end4 - start4) / 1_000_000f + "ms");
@@ -310,46 +288,38 @@ public class Renderer {
         return trianglesToRender;
     }
 
-    private void drawTriangles(int[][] triangles, boolean[] trianglesToRender, Vector3[] vertices, Color colour){
-//        for (int i = 0; i < triangles.length; i++){
-//            if (!trianglesToRender[i])
-//                continue;
-//
-//            drawTriangle(triangles[i], vertices, colour);
+    private void drawTriangles(int[][] triangles, Vector3[] vertices, Color colour){
+        getProjectedPoints(vertices);
+        int centreX = Config.SCREEN_WIDTH / 2;
+        int centreY = Config.SCREEN_HEIGHT / 2;
 
-            getProjectedPoints(vertices);
-            int centreX = Config.SCREEN_WIDTH / 2;
-            int centreY = Config.SCREEN_HEIGHT / 2;
+        for (int j = 0; j < triangles.length; j++) {
+            int[] triangle = triangles[j];
 
-            for (int j = 0; j < triangles.length; j++) {
+            int i0 = triangle[0];
+            int i1 = triangle[1];
+            int i2 = triangle[2];
 
-                int[] triangle = triangles[j];
-
-                int i0 = triangle[0];
-                int i1 = triangle[1];
-                int i2 = triangle[2];
-
-                if (!projectedToRender[i0] &&
-                    !projectedToRender[i1] &&
-                    !projectedToRender[i2]){
-                    continue;
-                }
-
-                triangleX[0] = projectedX[i0] + centreX;
-                triangleX[1] = projectedX[i1] + centreX;
-                triangleX[2] = projectedX[i2] + centreX;
-
-                triangleY[0] = projectedY[i0] + centreY;
-                triangleY[1] = projectedY[i1] + centreY;
-                triangleY[2] = projectedY[i2] + centreY;
-
-
-                gc.setFill(ColourMap.getColour(vertices[i0].y, maxHeight, ColourMap.rainbowCMAP));
-
-                gc.fillPolygon(triangleX, triangleY, 3);
-
+            if (!projectedToRender[i0] &&
+                !projectedToRender[i1] &&
+                !projectedToRender[i2]){
+                continue;
             }
-        //}
+
+            triangleX[0] = projectedX[i0] + centreX;
+            triangleX[1] = projectedX[i1] + centreX;
+            triangleX[2] = projectedX[i2] + centreX;
+
+            triangleY[0] = projectedY[i0] + centreY;
+            triangleY[1] = projectedY[i1] + centreY;
+            triangleY[2] = projectedY[i2] + centreY;
+
+
+            gc.setFill(ColourMap.getColour(vertices[i0].y, maxHeight, ColourMap.rainbowCMAP));
+
+            gc.fillPolygon(triangleX, triangleY, 3);
+
+        }
     }
 
     public void drawTriangle(int[] triangle, Vector3[] vertices, Color colour){

@@ -16,7 +16,6 @@ import java.util.ArrayList;
 
 public class Window extends Application {
     private static Renderer renderer;
-    private static ArrayList<Model> models;
     private static ArrayList<SolidModel> solidModels;
     private static World world;
 
@@ -28,9 +27,8 @@ public class Window extends Application {
 
     private boolean spinCamera = true;
 
-    public static void launchWindow(Renderer r, ArrayList<Model> m, ArrayList<SolidModel> sm){
+    public static void launchWindow(Renderer r, ArrayList<SolidModel> sm){
         renderer = r;
-        models = m;
         solidModels = sm;
         orbitRadius = renderer.cam.getPosition().z;
         Application.launch(Window.class);
@@ -81,10 +79,10 @@ public class Window extends Application {
                     updateOrbitRadius(-orbitRadiusChange);
                     break;
                 case D:
-                    moveCameraSideways(movementStep);
+                    moveCameraSideways(-movementStep);
                     break;
                 case A:
-                    moveCameraSideways(-movementStep);
+                    moveCameraSideways(movementStep);
                     break;
                 case R:
                     resetCamera();
@@ -103,8 +101,6 @@ public class Window extends Application {
 
         canvas.requestFocus();
 
-        renderer.renderHollows(models);
-
 
         new AnimationTimer(){
             @Override
@@ -118,10 +114,6 @@ public class Window extends Application {
                 renderer.maxHeight = model.units * model.voxelSize;
                 if (renderer.renderSolids(solidModels))
                     return;
-
-                Model hmodel = models.getFirst();
-                renderer.maxHeight = hmodel.getEdgeLength();
-                renderer.renderHollows(models);
             }
         }.start();
     }

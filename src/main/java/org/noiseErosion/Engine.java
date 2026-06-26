@@ -5,7 +5,6 @@ import org.noiseErosion.lib.World;
 import java.util.ArrayList;
 
 public class Engine {
-    private ArrayList<Model> hollowModels;
     private ArrayList<SolidModel> solidModels;
     private final Camera cam;
     private final Renderer renderer;
@@ -16,14 +15,6 @@ public class Engine {
         Config.DEFAULT_LOOKAT = camLookAt;
         Config.DEFAULT_POSITION = campos;
         renderer = new Renderer(cam);
-        hollowModels = new ArrayList<>();
-    }
-
-    public void addModel(Model model){
-        if (hollowModels == null)
-            hollowModels = new ArrayList<>();
-        hollowModels.add(model);
-        centreCameraHollow();
     }
 
     public void addModel(SolidModel model){
@@ -45,13 +36,6 @@ public class Engine {
         cam.setLookat(new Vector3(cx, cy, cz));
     }
 
-    public void centreCameraHollow(){
-        Model m = hollowModels.getFirst();
-        float cx = (m.getEdgeLength() - 1) * 4f / 2f;
-
-        cam.setLookat(new Vector3(cx, cx, cx));
-    }
-
     public void centreCameraSolid(){
         SolidModel sm = solidModels.getFirst();
         float size = sm.voxelSize * sm.units;
@@ -66,7 +50,7 @@ public class Engine {
     public void start(){
         if (world == null){
             //models
-            Window.launchWindow(renderer, hollowModels, solidModels);
+            Window.launchWindow(renderer, solidModels);
         } else {
             //worlds
             Window.launchWindow(renderer, world);
