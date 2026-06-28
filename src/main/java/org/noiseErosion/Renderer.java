@@ -15,6 +15,7 @@ public class Renderer {
     private boolean[] projectedToRender;
 
     private Color[] cachedColours;
+    private Color[] colourMap = ColourMap.viridisCMAP;
     private int[] visibleTriangleIndexes;
     private float[] triangleDepths;
     private float[] chunkDepths;
@@ -41,11 +42,16 @@ public class Renderer {
         this.debugEnabled = debugEnabled;
     }
 
+    public void setColourMap(Color[] colourMap){
+        this.colourMap = colourMap;
+        cachedColours = null;
+    }
+
     //solid model
 
-    private boolean renderSolids(ArrayList<SolidModel> models){
+    private void renderSolids(ArrayList<SolidModel> models){
         if (models == null)
-            return false;
+            return;
 
         SolidModel model1 = models.getFirst();
         modelOffset = model1.offset;
@@ -56,8 +62,10 @@ public class Renderer {
         colourMinY = modelOffset.y - modelWidth / 2f;
         buildColourCache();
 
-        if (debugEnabled)
-            return renderSolidsWithDebug(models);
+        if (debugEnabled) {
+            renderSolidsWithDebug(models);
+            return;
+        }
 
         getChunkDepths(models);
         sortChunks(models.size(), models);
@@ -65,15 +73,13 @@ public class Renderer {
         for (SolidModel model : models){
             renderSolidModel(model);
         }
-
-        return true;
     }
 
-    private boolean renderSolidsWithDebug(ArrayList<SolidModel> models){
+    private void renderSolidsWithDebug(ArrayList<SolidModel> models){
         float chunkSortTime = 0f;
         float cullTime = 0f;
         float triangleSortTime = 0f;
-        float drawTime = 0f;
+        DrawDebugTimes drawTimes = new DrawDebugTimes();
 
         long start = System.nanoTime();
         getChunkDepths(models);
@@ -82,19 +88,84 @@ public class Renderer {
         chunkSortTime += (end - start) / 1_000_000f;
 
         for (SolidModel model : models){
-            float[] times = renderSolidModelWithDebug(model);
-            cullTime += times[0];
-            triangleSortTime += times[1];
-            drawTime += times[2];
+            ModelDebugTimes times = renderSolidModelWithDebug(model);
+            cullTime += times.cullTime;
+            triangleSortTime += times.triangleSortTime;
+            drawTimes.add(times.drawTimes);
         }
 
-        System.out.println("Chunk sort time: " + chunkSortTime + "ms");
-        System.out.println("Cull time: " + cullTime + "ms");
-        System.out.println("Triangle sort time: " + triangleSortTime + "ms");
-        System.out.println("Draw time: " + drawTime + "ms");
-        System.out.println();
+        float drawTime = drawTimes.getTotal();
+        float totalTime = chunkSortTime + cullTime + triangleSortTime + drawTime;
 
-        return true;
+        System.out.println("Chunk sort time: " + formatDebugTime(chunkSortTime, totalTime));
+        System.out.println("Cull time: " + formatDebugTime(cullTime, totalTime));
+        System.out.println("Triangle sort time: " + formatDebugTime(triangleSortTime, totalTime));
+        System.out.println("Draw time: " + formatDebugTime(drawTime, totalTime));
+        System.out.println("  Fill changes: " + drawTimes.fillChanges);
+        System.out.println("  Projection: " + formatDebugTime(drawTimes.projectionTime, drawTime) +
+                " | " + formatAverageTime(drawTimes.projectionTime, drawTimes.totalVertices, "vertex"));
+        System.out.println("  Screen coords: " + formatDebugTime(drawTimes.screenCoordTime, drawTime) +
+                " | " + formatAverageTime(drawTimes.screenCoordTime, drawTimes.drawnTriangles, "triangle"));
+        System.out.println("  Colour lookup: " + formatDebugTime(drawTimes.colourLookupTime, drawTime) +
+                " | " + formatAverageTime(drawTimes.colourLookupTime, drawTimes.drawnTriangles, "triangle"));
+        System.out.println("  Set fill: " + formatDebugTime(drawTimes.setFillTime, drawTime) +
+                " | " + formatAverageTime(drawTimes.setFillTime, drawTimes.fillChanges, "change"));
+        System.out.println("  Fill polygons: " + formatDebugTime(drawTimes.fillPolygonTime, drawTime) +
+                " | " + formatAverageTime(drawTimes.fillPolygonTime, drawTimes.drawnTriangles, "triangle"));
+        System.out.println("Total render time: " + String.format("%.2fms", totalTime));
+        System.out.println();
+    }
+
+    private String formatDebugTime(float time, float totalTime){
+        float percentage = totalTime == 0f ? 0f : 100f * time / totalTime;
+        return String.format("%.2fms, %.2f%%", time, percentage);
+    }
+
+    private String formatAverageTime(float time, int count, String unit){
+        if (count == 0)
+            return "0.0000ms/" + unit;
+
+        return String.format("%.4fms/%s", time / count, unit);
+    }
+
+    private static class ModelDebugTimes {
+        float cullTime;
+        float triangleSortTime;
+        DrawDebugTimes drawTimes;
+    }
+
+    private static class DrawDebugTimes {
+        float projectionTime;
+        float screenCoordTime;
+        float colourLookupTime;
+        float setFillTime;
+        float fillPolygonTime;
+        int totalVertices;
+        int projectedVertices;
+        int rejectedVertices;
+        int consideredTriangles;
+        int drawnTriangles;
+        int skippedTriangles;
+        int fillChanges;
+
+        void add(DrawDebugTimes other){
+            projectionTime += other.projectionTime;
+            screenCoordTime += other.screenCoordTime;
+            colourLookupTime += other.colourLookupTime;
+            setFillTime += other.setFillTime;
+            fillPolygonTime += other.fillPolygonTime;
+            totalVertices += other.totalVertices;
+            projectedVertices += other.projectedVertices;
+            rejectedVertices += other.rejectedVertices;
+            consideredTriangles += other.consideredTriangles;
+            drawnTriangles += other.drawnTriangles;
+            skippedTriangles += other.skippedTriangles;
+            fillChanges += other.fillChanges;
+        }
+
+        float getTotal(){
+            return projectionTime + screenCoordTime + colourLookupTime + setFillTime + fillPolygonTime;
+        }
     }
 
     public void getChunkDepths(ArrayList<SolidModel> models){
@@ -278,27 +349,24 @@ public class Renderer {
         model.dirty = false;
     }
 
-    private float[] renderSolidModelWithDebug(SolidModel model){
+    private ModelDebugTimes renderSolidModelWithDebug(SolidModel model){
         if (model.dirty)
             buildSolidModelCache(model);
 
         Vector3[] vertices = model.cachedVerts;
-        float[] times = new float[3];
+        ModelDebugTimes times = new ModelDebugTimes();
 
         long start = System.nanoTime();
         int count = backfaceCullTriangles(model.cachedTris, model.cachedVerts);
         long end = System.nanoTime();
-        times[0] = (end - start) / 1_000_000f;
+        times.cullTime = (end - start) / 1_000_000f;
 
         start = System.nanoTime();
         sortTriangles(count);
         end = System.nanoTime();
-        times[1] = (end - start) / 1_000_000f;
+        times.triangleSortTime = (end - start) / 1_000_000f;
 
-        start = System.nanoTime();
-        drawTriangles(model.cachedTris, vertices, count);
-        end = System.nanoTime();
-        times[2] = (end - start) / 1_000_000f;
+        times.drawTimes = drawTrianglesWithDebug(model.cachedTris, vertices, count);
 
         return times;
     }
@@ -385,23 +453,15 @@ public class Renderer {
             cachedColours[i] = ColourMap.getColour(
                 i,
                 length,
-                ColourMap.rainbowCMAP
+                colourMap
             );
         }
     }
 
     private void getProjectedPoints(Vector3[] vertices){
-        int length = vertices.length;
-        if (projectedX == null || projectedX.length < length) {
-            projectedX = new float[length];
-            projectedY = new float[length];
-            projectedToRender = new boolean[length];
+        getProjectedPointStorage(vertices.length);
 
-            triangleX = new double[3];
-            triangleY = new double[3];
-        }
-
-        for (int i = 0; i < length; i++) {
+        for (int i = 0; i < vertices.length; i++) {
             if (!cam.project(vertices[i], projectedPoint)){
                 projectedToRender[i] = false;
                 continue;
@@ -411,6 +471,17 @@ public class Renderer {
             projectedY[i] = projectedPoint.y;
 
             projectedToRender[i] = true;
+        }
+    }
+
+    private void getProjectedPointStorage(int length){
+        if (projectedX == null || projectedX.length < length) {
+            projectedX = new float[length];
+            projectedY = new float[length];
+            projectedToRender = new boolean[length];
+
+            triangleX = new double[3];
+            triangleY = new double[3];
         }
     }
 
@@ -454,6 +525,101 @@ public class Renderer {
 
             gc.fillPolygon(triangleX, triangleY, 3);
         }
+    }
+
+    private DrawDebugTimes drawTrianglesWithDebug(int[][] triangles, Vector3[] vertices, int count){
+        DrawDebugTimes times = new DrawDebugTimes();
+
+        long start = System.nanoTime();
+        ProjectionDebugStats projectionStats = getProjectedPointsWithDebug(vertices);
+        long end = System.nanoTime();
+        times.projectionTime = (end - start) / 1_000_000f;
+        times.totalVertices = projectionStats.totalVertices;
+        times.projectedVertices = projectionStats.projectedVertices;
+        times.rejectedVertices = projectionStats.rejectedVertices;
+        times.consideredTriangles = count;
+
+        int centreX = Config.SCREEN_WIDTH / 2;
+        int centreY = Config.SCREEN_HEIGHT / 2;
+
+        int lastIndex = -1;
+        for (int j = 0; j < count; j++) {
+            int[] triangle = triangles[visibleTriangleIndexes[j]];
+
+            int i0 = triangle[0];
+            int i1 = triangle[1];
+            int i2 = triangle[2];
+
+            if (!projectedToRender[i0] ||
+                !projectedToRender[i1] ||
+                !projectedToRender[i2]){
+                times.skippedTriangles++;
+                continue;
+            }
+
+            start = System.nanoTime();
+            triangleX[0] = projectedX[i0] + centreX;
+            triangleX[1] = projectedX[i1] + centreX;
+            triangleX[2] = projectedX[i2] + centreX;
+
+            triangleY[0] = projectedY[i0] + centreY;
+            triangleY[1] = projectedY[i1] + centreY;
+            triangleY[2] = projectedY[i2] + centreY;
+            end = System.nanoTime();
+            times.screenCoordTime += (end - start) / 1_000_000f;
+
+            start = System.nanoTime();
+            int index = getColourIndex(vertices[i0].y);
+            Color c = cachedColours[index];
+            end = System.nanoTime();
+            times.colourLookupTime += (end - start) / 1_000_000f;
+
+            if (lastIndex != index) {
+                start = System.nanoTime();
+                gc.setFill(c);
+                end = System.nanoTime();
+                times.setFillTime += (end - start) / 1_000_000f;
+                lastIndex = index;
+                times.fillChanges++;
+            }
+
+            start = System.nanoTime();
+            gc.fillPolygon(triangleX, triangleY, 3);
+            end = System.nanoTime();
+            times.fillPolygonTime += (end - start) / 1_000_000f;
+            times.drawnTriangles++;
+        }
+
+        return times;
+    }
+
+    private static class ProjectionDebugStats {
+        int totalVertices;
+        int projectedVertices;
+        int rejectedVertices;
+    }
+
+    private ProjectionDebugStats getProjectedPointsWithDebug(Vector3[] vertices){
+        ProjectionDebugStats stats = new ProjectionDebugStats();
+        stats.totalVertices = vertices.length;
+
+        getProjectedPointStorage(vertices.length);
+
+        for (int i = 0; i < vertices.length; i++) {
+            if (!cam.project(vertices[i], projectedPoint)){
+                projectedToRender[i] = false;
+                stats.rejectedVertices++;
+                continue;
+            }
+
+            projectedX[i] = projectedPoint.x;
+            projectedY[i] = projectedPoint.y;
+
+            projectedToRender[i] = true;
+            stats.projectedVertices++;
+        }
+
+        return stats;
     }
 
     private int model1Units(){

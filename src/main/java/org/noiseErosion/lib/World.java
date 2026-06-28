@@ -14,12 +14,18 @@ public class World {
     private final int seed;
 
     private final int modelWidth;
+    private final float noiseScale;
+    private final float noiseThreshold;
 
     public World(Vector3 worldSize, int voxelsPerChunk, int mWidth){
         this(worldSize, voxelsPerChunk, mWidth, (int)(Math.random() * 1000));
     }
 
     public World(Vector3 worldSize, int voxelsPerChunk, int mWidth, int seed){
+        this(worldSize, voxelsPerChunk, mWidth, seed, 0.03f, 0.5f);
+    }
+
+    public World(Vector3 worldSize, int voxelsPerChunk, int mWidth, int seed, float noiseScale, float noiseThreshold){
         worldWidth = (int) worldSize.x;
         worldHeight = (int) worldSize.y;
         worldDepth = (int) worldSize.z;
@@ -27,6 +33,8 @@ public class World {
         chunks = new SolidModel[worldWidth][worldHeight][worldDepth];
         this.seed = seed;
         modelWidth = mWidth;
+        this.noiseScale = noiseScale;
+        this.noiseThreshold = noiseThreshold;
     }
 
 
@@ -36,7 +44,7 @@ public class World {
                 for (int k = 0; k < worldDepth; k++) {
                     SolidModel sm = new SolidModel(modelWidth, new Vector3(i * modelWidth, j * modelWidth, k * modelWidth), chunkWidth);
                     chunks[i][j][k] = sm;
-                    chunks[i][j][k].loadSolidState(Noise.apply(sm, 0.03f, 0.5f, new Vector3(i, j, k), seed));
+                    chunks[i][j][k].loadSolidState(Noise.apply(sm, noiseScale, noiseThreshold, new Vector3(i, j, k), seed));
                 }
             }
         }
@@ -48,5 +56,7 @@ public class World {
     public int getChunkWidth() { return chunkWidth;}
     public int getModelWidth() { return modelWidth;}
     public int getSeed() { return seed;}
+    public float getNoiseScale() { return noiseScale;}
+    public float getNoiseThreshold() { return noiseThreshold;}
     public float getVoxelSize() { return (float) modelWidth / chunkWidth; }
 }

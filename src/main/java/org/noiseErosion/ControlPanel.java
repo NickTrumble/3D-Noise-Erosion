@@ -2,6 +2,7 @@ package org.noiseErosion;
 
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.control.ToggleButton;
@@ -63,6 +64,44 @@ public class ControlPanel {
         root.getChildren().add(sliderGroup);
 
         return slider;
+    }
+
+    public Slider addFloatSlider(String label, double min, double max, double value){
+        Label valueLabel = new Label(label + ": " + formatFloat(value));
+        valueLabel.setStyle("-fx-text-fill: white;");
+
+        Slider slider = new Slider(min, max, value);
+        slider.setMaxWidth(Double.MAX_VALUE);
+
+        slider.valueProperty().addListener((observable, oldValue, newValue) -> {
+            valueLabel.setText(label + ": " + formatFloat(newValue.doubleValue()));
+        });
+
+        VBox sliderGroup = new VBox(4, valueLabel, slider);
+        VBox.setVgrow(sliderGroup, Priority.NEVER);
+        root.getChildren().add(sliderGroup);
+
+        return slider;
+    }
+
+    public ComboBox<String> addComboBox(String label, String[] options, String value){
+        Label valueLabel = new Label(label);
+        valueLabel.setStyle("-fx-text-fill: white;");
+
+        ComboBox<String> comboBox = new ComboBox<>();
+        comboBox.getItems().addAll(options);
+        comboBox.setValue(value);
+        comboBox.setMaxWidth(Double.MAX_VALUE);
+
+        VBox comboGroup = new VBox(4, valueLabel, comboBox);
+        VBox.setVgrow(comboGroup, Priority.NEVER);
+        root.getChildren().add(comboGroup);
+
+        return comboBox;
+    }
+
+    private String formatFloat(double value){
+        return String.format("%.2f", value);
     }
 
     public void addValueSwapper(ToggleButton button, String label){
