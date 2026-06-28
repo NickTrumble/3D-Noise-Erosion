@@ -1,6 +1,5 @@
 package org.noiseErosion.lib;
 
-import javafx.scene.paint.Color;
 import org.noiseErosion.Noise;
 import org.noiseErosion.SolidModel;
 import org.noiseErosion.Vector3;
@@ -33,7 +32,6 @@ public class World {
                 for (int k = 0; k < worldDepth; k++) {
                     SolidModel sm = new SolidModel(modelWidth, new Vector3(i * modelWidth, j * modelWidth, k * modelWidth), chunkWidth);
                     chunks[i][j][k] = sm;
-                    chunks[i][j][k].setColour(Color.GREEN);
                     chunks[i][j][k].loadSolidState(Noise.apply(sm, 0.03f, 0.5f, new Vector3(i, j, k), seed));
                 }
             }

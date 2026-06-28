@@ -5,10 +5,14 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Button;
+import javafx.scene.control.Slider;
+import javafx.scene.control.ToggleButton;
+import javafx.geometry.Insets;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.ScrollEvent;
-import javafx.scene.layout.Pane;
+import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import org.noiseErosion.lib.World;
 
@@ -19,7 +23,6 @@ public class Window extends Application {
     private static ArrayList<SolidModel> solidModels;
     private static World world;
 
-    private float angle = 0f;
     private static float orbitRadius = -5f;
     private float manualSpinAmount = 0.1f;
     private float orbitRadiusChange = 5f;
@@ -30,6 +33,10 @@ public class Window extends Application {
     private long lastFPS = 0;
     private int frames = 0;
     private float fps;
+
+    private int modelWidth = 4;
+    private int chunkCount = 6;
+    private int voxelsPerChunk = 8;
 
     public static void launchWindow(Renderer r, ArrayList<SolidModel> sm){
         renderer = r;
@@ -47,6 +54,7 @@ public class Window extends Application {
 
     @Override
     public void start(Stage stage){
+        loadWorldSettings();
         Config.DEFAULT_ORBIT = renderer.cam.getPosition().z;
         Canvas canvas = new Canvas(Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT);
         GraphicsContext gc = canvas.getGraphicsContext2D();
@@ -97,7 +105,28 @@ public class Window extends Application {
         });
 
         renderer.setGraphicsContext(gc);
-        Pane root = new Pane(canvas);
+        ControlPanel controlPanel = new ControlPanel();
+        Button resetCameraButton = controlPanel.addButton("Reset Camera");
+        resetCameraButton.setOnAction(event -> {
+            resetCamera();
+            canvas.requestFocus();
+        });
+
+        ToggleButton debugToggle = controlPanel.addToggle("Debug Mode");
+        debugToggle.setOnAction(event -> {
+            renderer.setDebugEnabled(debugToggle.isSelected());
+            canvas.requestFocus();
+        });
+
+        Slider modelWidthSlider = controlPanel.addIntSlider("Model Width", 2, Math.max(12, modelWidth), modelWidth);
+        Slider chunkCountSlider = controlPanel.addIntSlider("Chunks", 1, Math.max(10, chunkCount), chunkCount);
+        Slider voxelsPerChunkSlider = controlPanel.addIntSlider("Voxels/Chunk", 4, Math.max(16, voxelsPerChunk), voxelsPerChunk);
+        addWorldRebuildHandlers(modelWidthSlider, chunkCountSlider, voxelsPerChunkSlider, canvas);
+
+        BorderPane root = new BorderPane();
+        root.setLeft(controlPanel.getRoot());
+        BorderPane.setMargin(controlPanel.getRoot(), new Insets(12, 0, 12, 12));
+        root.setCenter(canvas);
 
         stage.setScene(new Scene(root));
         stage.setTitle("Noise Erosion");
@@ -116,8 +145,6 @@ public class Window extends Application {
                     updateFPS(now, stage);
                     return;
                 }
-                SolidModel model = solidModels.getFirst();
-                renderer.maxHeight = model.units * model.voxelSize;
                 if (renderer.renderSolids(solidModels)) {
                     updateFPS(now, stage);
                     return;
@@ -168,5 +195,98 @@ public class Window extends Application {
     public void resetCamera(){
         orbitRadius = Config.DEFAULT_ORBIT;
         renderer.cam.resetCamera();
+    }
+
+    private void loadWorldSettings(){
+        if (world == null)
+            return;
+
+        modelWidth = world.getModelWidth();
+        chunkCount = world.getWorldWidth();
+        voxelsPerChunk = world.getChunkWidth();
+    }
+
+    private void addWorldRebuildHandlers(Slider modelWidthSlider, Slider chunkCountSlider, Slider voxelsPerChunkSlider, Canvas canvas){
+        Slider[] sliders = { modelWidthSlider, chunkCountSlider, voxelsPerChunkSlider };
+
+        for (Slider slider : sliders) {
+            slider.setOnMouseReleased(event -> {
+                rebuildWorldFromSliders(modelWidthSlider, chunkCountSlider, voxelsPerChunkSlider);
+                canvas.requestFocus();
+            });
+
+            slider.valueChangingProperty().addListener((observable, wasChanging, isChanging) -> {
+                if (!isChanging) {
+                    rebuildWorldFromSliders(modelWidthSlider, chunkCountSlider, voxelsPerChunkSlider);
+                    canvas.requestFocus();
+                }
+            });
+
+            slider.valueProperty().addListener((observable, oldValue, newValue) -> {
+                if (!slider.isValueChanging()) {
+                    rebuildWorldFromSliders(modelWidthSlider, chunkCountSlider, voxelsPerChunkSlider);
+                    canvas.requestFocus();
+                }
+            });
+        }
+    }
+
+    private void rebuildWorldFromSliders(Slider modelWidthSlider, Slider chunkCountSlider, Slider voxelsPerChunkSlider){
+        int newModelWidth = (int)Math.round(modelWidthSlider.getValue());
+        int newChunkCount = (int)Math.round(chunkCountSlider.getValue());
+        int newVoxelsPerChunk = (int)Math.round(voxelsPerChunkSlider.getValue());
+
+        if (newModelWidth == modelWidth &&
+            newChunkCount == chunkCount &&
+            newVoxelsPerChunk == voxelsPerChunk)
+            return;
+
+        modelWidth = newModelWidth;
+        chunkCount = newChunkCount;
+        voxelsPerChunk = newVoxelsPerChunk;
+        rebuildWorld();
+    }
+
+    private void rebuildWorld(){
+        if (world == null)
+            return;
+
+        World newWorld = new World(
+                new Vector3(chunkCount, chunkCount, chunkCount),
+                voxelsPerChunk,
+                modelWidth
+        );
+        newWorld.generateWorld();
+        world = newWorld;
+        centreCameraOnWorld();
+    }
+
+    private void centreCameraOnWorld(){
+        Vector3 oldPosition = renderer.cam.getPosition();
+        Vector3 oldLookat = renderer.cam.getLookat();
+        Vector3 cameraOffset = new Vector3(
+                oldPosition.x - oldLookat.x,
+                oldPosition.y - oldLookat.y,
+                oldPosition.z - oldLookat.z
+        );
+
+        float chunkSize = world.getChunkWidth() * world.getVoxelSize();
+
+        float cx = (world.getWorldWidth() - 1) * chunkSize / 2f;
+        float cy = (world.getWorldHeight() - 1) * chunkSize / 2f;
+        float cz = (world.getWorldDepth() - 1) * chunkSize / 2f;
+        Vector3 centre = new Vector3(cx, cy, cz);
+
+        Vector3 cameraPosition = new Vector3(
+                centre.x + cameraOffset.x,
+                centre.y + cameraOffset.y,
+                centre.z + cameraOffset.z
+        );
+
+        renderer.cam.setLookat(centre);
+        renderer.cam.setPosition(cameraPosition);
+        Config.DEFAULT_LOOKAT = new Vector3(centre);
+        Config.DEFAULT_POSITION = new Vector3(cameraPosition);
+        Config.DEFAULT_ORBIT = orbitRadius;
     }
 }

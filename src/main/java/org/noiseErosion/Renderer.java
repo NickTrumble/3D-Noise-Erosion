@@ -5,16 +5,13 @@ import javafx.scene.paint.Color;
 import org.noiseErosion.lib.World;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class Renderer {
-    public float maxHeight;
     public Camera cam;
     private GraphicsContext gc;
 
     private float[] projectedX;
     private float[] projectedY;
-    private float[] projectedZ;
     private boolean[] projectedToRender;
 
     private Color[] cachedColours;
@@ -24,19 +21,13 @@ public class Renderer {
 
     private double[] triangleX;
     private double[] triangleY;
+    private final Vector3 projectedPoint = new Vector3(0, 0, 0);
 
-
-    private final boolean debug = false;
-    private float drawTime = 0f;
-    private float sortTime = 0f;
-    private float cullTime = 0f;
-    private float renderTime = 0f;
-    private float colourTime = 0f;
-    private float setFillTime = 0f;
-    private float indexTime = 0f;
+    private boolean debugEnabled = false;
 
     private Vector3 modelOffset;
     private float modelVoxelsize;
+    private float colourMinY;
     private int modelChunks;
     private int modelWidth;
 
@@ -45,6 +36,11 @@ public class Renderer {
     public Renderer(Camera cam){
         this.cam = cam;
     }
+
+    public void setDebugEnabled(boolean debugEnabled){
+        this.debugEnabled = debugEnabled;
+    }
+
     //solid model
 
     public boolean renderSolids(ArrayList<SolidModel> models){
@@ -57,15 +53,11 @@ public class Renderer {
         modelWidth = model1.width;
         if (modelChunks == 0)
             modelChunks = 1;
+        colourMinY = modelOffset.y - modelWidth / 2f;
+        buildColourCache();
 
-
-        sortTime = 0f;
-        drawTime = 0f;
-        cullTime = 0f;
-        renderTime = 0f;
-        colourTime = 0f;
-        setFillTime = 0f;
-        indexTime = 0f;
+        if (debugEnabled)
+            return renderSolidsWithDebug(models);
 
         getChunkDepths(models);
         sortChunks(models.size(), models);
@@ -74,16 +66,34 @@ public class Renderer {
             renderSolidModel(model);
         }
 
-        if (debug){
-            System.out.println("Sort time: " + sortTime + "ms");
-            System.out.println("Cull time: " + cullTime + "ms");
-            System.out.println("Draw time: " + drawTime + "ms");
-            System.out.println("Render time: " + renderTime + "ms, %" + 100 * renderTime / drawTime);
-            System.out.println("Colour time: " + colourTime + "ms, %" + 100 * colourTime / drawTime);
-            System.out.println("index time: " + indexTime + "ms, %" + 100 * indexTime / colourTime);
-            System.out.println("set fill time: " + setFillTime + "ms, %" + 100 * setFillTime / colourTime);
+        return true;
+    }
 
+    private boolean renderSolidsWithDebug(ArrayList<SolidModel> models){
+        float chunkSortTime = 0f;
+        float cullTime = 0f;
+        float triangleSortTime = 0f;
+        float drawTime = 0f;
+
+        long start = System.nanoTime();
+        getChunkDepths(models);
+        sortChunks(models.size(), models);
+        long end = System.nanoTime();
+        chunkSortTime += (end - start) / 1_000_000f;
+
+        for (SolidModel model : models){
+            float[] times = renderSolidModelWithDebug(model);
+            cullTime += times[0];
+            triangleSortTime += times[1];
+            drawTime += times[2];
         }
+
+        System.out.println("Chunk sort time: " + chunkSortTime + "ms");
+        System.out.println("Cull time: " + cullTime + "ms");
+        System.out.println("Triangle sort time: " + triangleSortTime + "ms");
+        System.out.println("Draw time: " + drawTime + "ms");
+        System.out.println();
+
         return true;
     }
 
@@ -93,22 +103,10 @@ public class Renderer {
             chunkDepths.length < len)
             chunkDepths = new float[len];
 
-        Vector3 forward = cam.getForward();
-        forward.normalise();
-        Vector3 pos = cam.getPosition();
         for (int i = 0; i < len; i++) {
-            chunkDepths[i] = getChunkDepth(models.get(i), forward, pos);
+            chunkDepths[i] = cam.getDepth(models.get(i).offset);
         }
 
-    }
-
-    public float getChunkDepth(SolidModel model, Vector3 forward, Vector3 pos){
-        Vector3 offset = model.offset;
-        float x = offset.x - pos.x;
-        float y = offset.y - pos.y;
-        float z = offset.z - pos.z;
-
-        return x * forward.x + y * forward.y + z * forward.z;
     }
 
     public void sortChunks(int count, ArrayList<SolidModel> models){
@@ -203,10 +201,106 @@ public class Renderer {
             model.dirty = false;
         }
 
-        if (debug)
-            postDirtyRenderWithDebug(model);
-        else
-            postDirtyRender(model);
+        postDirtyRender(model);
+    }
+
+    private void buildSolidModelCache(SolidModel model){
+        int width = model.units;
+        Vector3 offset = model.offset;
+        ArrayList<Vector3> verts = new ArrayList<>();
+        ArrayList<int[]> tris = new ArrayList<>();
+
+        float half = model.units / 2f;
+
+        for(int i = 0; i < width; i++){
+            for (int j = 0; j < width; j++) {
+                for (int k = 0; k < width; k++) {
+
+                    if(!model.isSolid(i, j, k)) continue;
+
+                    float wx = offset.x + (i - half) * model.voxelSize;
+                    float wy = offset.y + (j - half) * model.voxelSize;
+                    float wz = offset.z + (k - half) * model.voxelSize;
+
+                    if (!model.isSolid(i, j, k - 1))
+                        addFace(verts, tris,
+                                new Vector3(wx,   wy,   wz),
+                                new Vector3(wx,   wy+model.voxelSize, wz),
+                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz),
+                                new Vector3(wx+model.voxelSize, wy,   wz)
+                        );
+
+                    if (!model.isSolid(i, j, k + 1))
+                        addFace(verts, tris,
+                                new Vector3(wx,   wy,   wz+model.voxelSize),
+                                new Vector3(wx+model.voxelSize, wy,   wz+model.voxelSize),
+                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz+model.voxelSize),
+                                new Vector3(wx,   wy+model.voxelSize, wz+model.voxelSize)
+                        );
+
+                    if (!model.isSolid(i - 1, j, k))
+                        addFace(verts, tris,
+                                new Vector3(wx, wy,   wz),
+                                new Vector3(wx, wy,   wz+model.voxelSize),
+                                new Vector3(wx, wy+model.voxelSize, wz+model.voxelSize),
+                                new Vector3(wx, wy+model.voxelSize, wz)
+                        );
+
+                    if (!model.isSolid(i + 1, j, k))
+                        addFace(verts, tris,
+                                new Vector3(wx+model.voxelSize, wy,   wz),
+                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz),
+                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz+model.voxelSize),
+                                new Vector3(wx+model.voxelSize, wy,   wz+model.voxelSize)
+                        );
+
+                    if (!model.isSolid(i, j - 1, k))
+                        addFace(verts, tris,
+                                new Vector3(wx,   wy, wz),
+                                new Vector3(wx+model.voxelSize, wy, wz),
+                                new Vector3(wx+model.voxelSize, wy, wz+model.voxelSize),
+                                new Vector3(wx,   wy, wz+model.voxelSize)
+                        );
+
+                    if (!model.isSolid(i, j + 1, k))
+                        addFace(verts, tris,
+                                new Vector3(wx,   wy+model.voxelSize, wz),
+                                new Vector3(wx,   wy+model.voxelSize, wz+model.voxelSize),
+                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz+model.voxelSize),
+                                new Vector3(wx+model.voxelSize, wy+model.voxelSize, wz)
+                        );
+                }
+            }
+        }
+        model.cachedVerts = verts.toArray(new Vector3[0]);
+        model.cachedTris = tris.toArray(new int[0][]);
+
+        model.dirty = false;
+    }
+
+    private float[] renderSolidModelWithDebug(SolidModel model){
+        if (model.dirty)
+            buildSolidModelCache(model);
+
+        Vector3[] vertices = model.cachedVerts;
+        float[] times = new float[3];
+
+        long start = System.nanoTime();
+        int count = backfaceCullTriangles(model.cachedTris, model.cachedVerts);
+        long end = System.nanoTime();
+        times[0] = (end - start) / 1_000_000f;
+
+        start = System.nanoTime();
+        sortTriangles(count);
+        end = System.nanoTime();
+        times[1] = (end - start) / 1_000_000f;
+
+        start = System.nanoTime();
+        drawTriangles(model.cachedTris, vertices, count);
+        end = System.nanoTime();
+        times[2] = (end - start) / 1_000_000f;
+
+        return times;
     }
 
     private void postDirtyRender(SolidModel model){
@@ -216,36 +310,7 @@ public class Renderer {
         int count = backfaceCullTriangles(model.cachedTris, model.cachedVerts);
         sortTriangles(count);
 
-        //getting the triangles to render
-
-        //drawing the triangles
-        drawTriangles(model.cachedTris, vertices, model.colour, count);
-    }
-
-    private void postDirtyRenderWithDebug(SolidModel model){
-        Vector3[] vertices = model.cachedVerts;
-
-        long start = System.nanoTime();
-        //sorting the triangles
-        int count = backfaceCullTriangles(model.cachedTris, model.cachedVerts);
-        long end = System.nanoTime();
-        cullTime += (end - start) / 1_000_000f;
-
-        long start3 = System.nanoTime();
-        sortTriangles(count);
-
-        long end3 = System.nanoTime();
-        sortTime += (end3 - start3) / 1_000_000f;
-        //System.out.println("sort triangles: " + (end3 - start3) / 1_000_000f + "ms");
-
-        //drawing the triangles
-        long start4 = System.nanoTime();
-
-        drawTriangles(model.cachedTris, vertices, model.colour, count);
-
-        long end4 = System.nanoTime();
-        drawTime += (end4 - start4) / 1_000_000f;
-        //System.out.println("draw triangles: " + (end4 - start4) / 1_000_000f + "ms");
+        drawTriangles(model.cachedTris, vertices, count);
     }
 
     private int backfaceCullTriangles(int[][] triangles, Vector3[] vertices){
@@ -256,34 +321,18 @@ public class Renderer {
         }
 
 
-        Vector3 camPos = cam.getPosition();
-        Vector3 forward = cam.getForward();
-        forward.normalise();
-
         int count = 0;
         for (int i = 0; i < triangles.length; i++) {
             Vector3 a = vertices[triangles[i][0]];
             Vector3 b = vertices[triangles[i][1]];
             Vector3 c = vertices[triangles[i][2]];
 
-            if (isLookingAt(a, b, c)) {
+            if (cam.isTriangleFacingCamera(a, b, c)) {
                 visibleTriangleIndexes[count] = i;
-                triangleDepths[count++] = getAverageZ(triangles[i], vertices, camPos, forward);
+                triangleDepths[count++] = cam.getTriangleDepth(triangles[i], vertices);
             }
         }
         return count;
-    }
-
-    private float getAverageZ(int[] triangle, Vector3[] vertices, Vector3 camPos, Vector3 forward){
-        Vector3 a = vertices[triangle[0]];
-        Vector3 b = vertices[triangle[1]];
-        Vector3 c = vertices[triangle[2]];
-
-        float x = (a.x + b.x + c.x) / 3f - camPos.x;
-        float y = (a.y + b.y + c.y) / 3f - camPos.y;
-        float z = (a.z + b.z + c.z) / 3f - camPos.z;
-
-        return x * forward.x + y * forward.y + z * forward.z;
     }
 
     private void addFace(ArrayList<Vector3> verts, ArrayList<int[]> tris, Vector3 a, Vector3 b, Vector3 c, Vector3 d){
@@ -320,29 +369,17 @@ public class Renderer {
         modelVoxelsize = model1.voxelSize;
         modelWidth = model1.width;
         modelChunks = world.getWorldHeight();
-        maxHeight = world.getWorldHeight() * world.getChunkWidth() * models.getFirst().voxelSize;
-        buildColourCache();
+        colourMinY = modelOffset.y - modelWidth / 2f;
         renderSolids(models);
         return true;
     }
 
-    //needed for both versions
-    private boolean[] getVerticesToRender(Vector3[] vertices){
-        boolean[] verticesToRender = new boolean[vertices.length];
-
-        for (int i = 0; i < vertices.length; i++){
-            verticesToRender[i] = cam.isVertexInFrame(vertices[i]);
-        }
-        return verticesToRender;
-    }
-
     private void buildColourCache(){
-        int length = (int) (modelChunks * modelWidth / modelVoxelsize);
+        int length = modelChunks * model1Units() + 1;
         if (cachedColours != null &&
         length == cachedColours.length)
             return;
 
-        System.out.println("building colour cache");
         cachedColours = new Color[length];
         for (int i = 0; i < length; i++) {
             cachedColours[i] = ColourMap.getColour(
@@ -358,58 +395,26 @@ public class Renderer {
         if (projectedX == null || projectedX.length < length) {
             projectedX = new float[length];
             projectedY = new float[length];
-            projectedZ = new float[length];
             projectedToRender = new boolean[length];
 
             triangleX = new double[3];
             triangleY = new double[3];
         }
 
-        Vector3 position = cam.getPosition();
-        Vector3 forward = cam.getForward();
-        forward.normalise();
-        Vector3 right = cam.getRight();
-        right.normalise();
-        Vector3 trueUp = right.cross(forward);
-
-        float focalLength = 500f;
-
         for (int i = 0; i < length; i++) {
-            Vector3 v = vertices[i];
-
-            float x = v.x - position.x;
-            float y = v.y - position.y;
-            float z = v.z - position.z;
-
-
-            float cameraX = x * right.x + y * right.y + z * right.z;
-            float cameraY = x * trueUp.x + y * trueUp.y + z * trueUp.z;
-            float cameraZ = x * forward.x + y * forward.y + z * forward.z;
-
-            if (cameraZ < 0){
+            if (!cam.project(vertices[i], projectedPoint)){
                 projectedToRender[i] = false;
                 continue;
             }
 
-            projectedX[i] = cameraX * focalLength / cameraZ;
-            projectedY[i] = cameraY * focalLength / cameraZ;
-            projectedZ[i] = cameraZ;
+            projectedX[i] = projectedPoint.x;
+            projectedY[i] = projectedPoint.y;
 
             projectedToRender[i] = true;
         }
     }
 
-    private boolean[] getTrianglesToRender(int[][] triangles, Vector3[] vertices){
-        boolean[] verticesToRender = getVerticesToRender(vertices);
-        boolean[] trianglesToRender = new boolean[triangles.length];
-        for (int i = 0; i < triangles.length; i++){
-            trianglesToRender[i] = cam.isTriangleInFrame(i, triangles, verticesToRender);
-        }
-        return trianglesToRender;
-    }
-
-    private void drawTriangles(int[][] triangles, Vector3[] vertices, Color colour, int count){
-        //not a bottleneck
+    private void drawTriangles(int[][] triangles, Vector3[] vertices, int count){
         getProjectedPoints(vertices);
 
         int centreX = Config.SCREEN_WIDTH / 2;
@@ -417,7 +422,6 @@ public class Renderer {
 
         int lastIndex = -1;
         for (int j = 0; j < count; j++) {
-            //not a bottleneck
             int[] triangle = triangles[visibleTriangleIndexes[j]];
 
             int i0 = triangle[0];
@@ -437,11 +441,10 @@ public class Renderer {
             triangleY[0] = projectedY[i0] + centreY;
             triangleY[1] = projectedY[i1] + centreY;
             triangleY[2] = projectedY[i2] + centreY;
-//end
 
-            //gc.setFill(ColourMap.getColour(vertices[i0].y, maxHeight, ColourMap.rainbowCMAP));
-            int index = (int)((vertices[i0].y - modelOffset.y + 2) / modelVoxelsize);
+            int index = getColourIndex(vertices[i0].y);
             Color c = cachedColours[index];
+
 
 
             if (lastIndex != index) {
@@ -453,71 +456,22 @@ public class Renderer {
         }
     }
 
-    public boolean isLookingAt(Vector3 a, Vector3 b, Vector3 c){
-        //centre
-        float cx = (a.x + b.x + c.x) / 3f;
-        float cy = (a.y + b.y + c.y) / 3f;
-        float cz = (a.z + b.z + c.z) / 3f;
-
-        //vector ab = b - a
-        float abx = b.x - a.x;
-        float aby = b.y - a.y;
-        float abz = b.z - a.z;
-
-        //vector ac = c - a
-        float acx = c.x - a.x;
-        float acy = c.y - a.y;
-        float acz = c.z - a.z;
-
-        //normal
-        float nx = aby * acz - abz * acy;
-        float ny = abz * acx - abx * acz;
-        float nz = abx * acy - aby * acx;
-
-        //toCam
-        float camX = cam.getPosition().x - cx;
-        float camY = cam.getPosition().y - cy;
-        float camZ = cam.getPosition().z - cz;
-
-        //toCam dot normal
-        return camX * nx + camY * ny + camZ * nz > 0f;
+    private int model1Units(){
+        return Math.round(modelWidth / modelVoxelsize);
     }
 
-    public float getAverageZ(int[] tris, Vector3[] vertices){
-        Vector3 a = vertices[tris[0]];
-        Vector3 b = vertices[tris[1]];
-        Vector3 c = vertices[tris[2]];
+    private int getColourIndex(float y){
+        int index = (int)((y - colourMinY) / modelVoxelsize);
 
-        float cx = (a.x + b.x + c.x) / 3f - cam.getPosition().x;
-        float cy = (a.y + b.y + c.y) / 3f - cam.getPosition().y;
-        float cz = (a.z + b.z + c.z) / 3f - cam.getPosition().z;
+        if (index < 0)
+            return 0;
 
-        Vector3 forward = cam.getForward();
-        forward.normalise();
+        if (index >= cachedColours.length)
+            return cachedColours.length - 1;
 
-        return cx * forward.x + cy * forward.y + cz * forward.z;
+        return index;
     }
 
-    public Vector3 getCentre(Vector3 a, Vector3 b, Vector3 c){
-        return new Vector3(
-                (a.x + b.x + c.x) / 3f,
-                (a.y + b.y + c.y) / 3f,
-                (a.z + b.z + c.z) / 3f
-        );
-    }
-
-    private int[][] sortTriangles(int[][] triangles, Vector3[] vertices) {
-        Vector3 forward = cam.getForward();
-        forward.normalise();
-
-        ArrayList<int[]> tris = new ArrayList<>(Arrays.asList(triangles));
-        tris.sort((t1, t2) -> {
-            float d1 = vertices[t1[0]].z;
-            float d2 = vertices[t2[0]].z;
-            return Float.compare(d2, d1);
-        });
-        return tris.toArray(new int[0][]);
-    }
 
     //insertion sort
     private void sortTriangles(int count){

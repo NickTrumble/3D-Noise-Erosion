@@ -1,20 +1,14 @@
 package org.noiseErosion;
 
-import javafx.scene.paint.Color;
-
-import java.util.ArrayList;
-
 public class SolidModel {
     private final boolean[][][] solid;
     public int width;
     public Vector3 offset;
-    public float voxelSize; //to add
+    public float voxelSize;
     public int units;
-    public Color colour;
 
     public Vector3[] cachedVerts;
     public int[][] cachedTris;
-    public boolean[] cachedTrisToRender;
     public boolean dirty = true;
 
     public SolidModel(int modelWidth, Vector3 offset, int unitWidth){
@@ -57,6 +51,4 @@ public class SolidModel {
         solid[i][j][k] = state;
         dirty = true;
     }
-
-    public void setColour(Color colour) { this.colour = colour; }
 }
