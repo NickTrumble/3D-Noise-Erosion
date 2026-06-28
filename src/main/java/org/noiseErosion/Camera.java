@@ -94,6 +94,9 @@ public class Camera {
         float camY = this.position.y;
 
         setPosition(new Vector3(camX, camY, camZ));
+
+        System.out.println(position);
+        System.out.println(lookat);
     }
 
     public void moveCamera(Vector3 change){

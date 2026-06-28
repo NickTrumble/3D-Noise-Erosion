@@ -12,7 +12,6 @@ public class Engine {
 
     public Engine(Vector3 campos, Vector3 camLookAt){
         cam = new Camera(campos, camLookAt, new Vector3(0, 1, 0));
-        Config.DEFAULT_LOOKAT = camLookAt;
         Config.DEFAULT_POSITION = campos;
         renderer = new Renderer(cam);
     }
@@ -33,7 +32,9 @@ public class Engine {
         float cy = (world.getWorldHeight() - 1) * chunkSize / 2f;
         float cz = (world.getWorldDepth() - 1) * chunkSize / 2f;
 
-        cam.setLookat(new Vector3(cx, cy, cz));
+        Vector3 centre = new Vector3(cx, cy, cz);
+        cam.setLookat(centre);
+        Config.DEFAULT_LOOKAT = new Vector3(centre);
     }
 
     public void centreCameraSolid(){
