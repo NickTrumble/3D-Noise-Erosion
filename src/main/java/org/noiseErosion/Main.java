@@ -4,12 +4,6 @@ import org.noiseErosion.lib.World;
 
 public class Main {
     public static void main(String[] args){
-        Vector3 modelCentre = new Vector3(0, 0, -5);
-
-        SolidModel sm = new SolidModel(4, modelCentre, 32);
-
-        sm.loadSolidState(Noise.apply(sm, 0.1f, 0.4f));
-
         int mWidth = 4;
         int chunks = 6;
         World world = new World(new Vector3(chunks, chunks, chunks), 8, mWidth);
@@ -22,10 +16,7 @@ public class Main {
                 cameraDepth
         );
 
-        Engine engine = new Engine(cameraPosition, modelCentre);
-        engine.addModel(sm);
-        //engine.addModel(sm2);
-
+        Engine engine = new Engine(cameraPosition);
         engine.loadWorld(world);
 
         engine.start();

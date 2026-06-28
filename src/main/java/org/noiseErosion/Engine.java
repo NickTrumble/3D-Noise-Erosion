@@ -2,25 +2,15 @@ package org.noiseErosion;
 
 import org.noiseErosion.lib.World;
 
-import java.util.ArrayList;
-
 public class Engine {
-    private ArrayList<SolidModel> solidModels;
     private final Camera cam;
     private final Renderer renderer;
     private World world;
 
-    public Engine(Vector3 campos, Vector3 camLookAt){
-        cam = new Camera(campos, camLookAt, new Vector3(0, 1, 0));
+    public Engine(Vector3 campos){
+        cam = new Camera(campos, new Vector3(0, 0, 0), new Vector3(0, 1, 0));
         Config.DEFAULT_POSITION = campos;
         renderer = new Renderer(cam);
-    }
-
-    public void addModel(SolidModel model){
-        if (solidModels == null)
-            solidModels = new ArrayList<>();
-        solidModels.add(model);
-        centreCameraSolid();
     }
 
     public void loadWorld(World world){
@@ -37,24 +27,7 @@ public class Engine {
         Config.DEFAULT_LOOKAT = new Vector3(centre);
     }
 
-    public void centreCameraSolid(){
-        SolidModel sm = solidModels.getFirst();
-        float size = sm.voxelSize * sm.units;
-
-        float cx = sm.offset.x + size / 2f;
-        float cy = sm.offset.y + size / 2f;
-        float cz = sm.offset.z + size / 2f;
-
-        cam.setLookat(new Vector3(cx, cy, cz));
-    }
-
     public void start(){
-        if (world == null){
-            //models
-            Window.launchWindow(renderer, solidModels);
-        } else {
-            //worlds
-            Window.launchWindow(renderer, world);
-        }
+        Window.launchWindow(renderer, world);
     }
 }

@@ -16,11 +16,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import org.noiseErosion.lib.World;
 
-import java.util.ArrayList;
-
 public class Window extends Application {
     private static Renderer renderer;
-    private static ArrayList<SolidModel> solidModels;
     private static World world;
 
     private static float orbitRadius = -5f;
@@ -37,13 +34,7 @@ public class Window extends Application {
     private int modelWidth = 4;
     private int chunkCount = 6;
     private int voxelsPerChunk = 8;
-
-    public static void launchWindow(Renderer r, ArrayList<SolidModel> sm){
-        renderer = r;
-        solidModels = sm;
-        orbitRadius = renderer.cam.getPosition().z;
-        Application.launch(Window.class);
-    }
+    private int worldSeed = 0;
 
     public static void launchWindow(Renderer r, World w){
         renderer = r;
@@ -145,10 +136,6 @@ public class Window extends Application {
                     updateFPS(now, stage);
                     return;
                 }
-                if (renderer.renderSolids(solidModels)) {
-                    updateFPS(now, stage);
-                    return;
-                }
 
                 updateFPS(now, stage);
             }
@@ -204,29 +191,16 @@ public class Window extends Application {
         modelWidth = world.getModelWidth();
         chunkCount = world.getWorldWidth();
         voxelsPerChunk = world.getChunkWidth();
+        worldSeed = world.getSeed();
     }
 
     private void addWorldRebuildHandlers(Slider modelWidthSlider, Slider chunkCountSlider, Slider voxelsPerChunkSlider, Canvas canvas){
         Slider[] sliders = { modelWidthSlider, chunkCountSlider, voxelsPerChunkSlider };
 
         for (Slider slider : sliders) {
-            slider.setOnMouseReleased(event -> {
+            slider.valueProperty().addListener((observable, oldValue, newValue) -> {
                 rebuildWorldFromSliders(modelWidthSlider, chunkCountSlider, voxelsPerChunkSlider);
                 canvas.requestFocus();
-            });
-
-            slider.valueChangingProperty().addListener((observable, wasChanging, isChanging) -> {
-                if (!isChanging) {
-                    rebuildWorldFromSliders(modelWidthSlider, chunkCountSlider, voxelsPerChunkSlider);
-                    canvas.requestFocus();
-                }
-            });
-
-            slider.valueProperty().addListener((observable, oldValue, newValue) -> {
-                if (!slider.isValueChanging()) {
-                    rebuildWorldFromSliders(modelWidthSlider, chunkCountSlider, voxelsPerChunkSlider);
-                    canvas.requestFocus();
-                }
             });
         }
     }
@@ -254,7 +228,8 @@ public class Window extends Application {
         World newWorld = new World(
                 new Vector3(chunkCount, chunkCount, chunkCount),
                 voxelsPerChunk,
-                modelWidth
+                modelWidth,
+                worldSeed
         );
         newWorld.generateWorld();
         world = newWorld;

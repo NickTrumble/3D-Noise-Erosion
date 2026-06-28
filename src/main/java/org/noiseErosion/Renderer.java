@@ -43,7 +43,7 @@ public class Renderer {
 
     //solid model
 
-    public boolean renderSolids(ArrayList<SolidModel> models){
+    private boolean renderSolids(ArrayList<SolidModel> models){
         if (models == null)
             return false;
 
@@ -125,7 +125,7 @@ public class Renderer {
         }
     }
 
-    public void renderSolidModel(SolidModel model){
+    private void renderSolidModel(SolidModel model){
         if (model.dirty){
 
             int width = model.units;
